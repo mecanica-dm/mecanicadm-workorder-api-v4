@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Orçamento de Serviço</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 12px;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0056b3;
+        }
+        .header h1 {
+            color: #0056b3;
+            margin: 0;
+        }
+        .info-section {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .info-section td {
+            padding: 5px;
+            vertical-align: top;
+        }
+        .info-label {
+            font-weight: bold;
+            width: 120px;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .table th, .table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .table th {
+            background-color: #f2f2f2;
+            color: #333;
+            font-weight: bold;
+        }
+        .table td.right {
+            text-align: right;
+        }
+        .totals {
+            width: 100%;
+            margin-top: 20px;
+            border-top: 2px solid #333;
+            padding-top: 10px;
+        }
+        .totals table {
+            width: 50%;
+            float: right;
+            border-collapse: collapse;
+        }
+        .totals th, .totals td {
+            padding: 5px;
+            text-align: right;
+        }
+        .totals th {
+            width: 60%;
+        }
+        .grand-total {
+            font-size: 14px;
+            font-weight: bold;
+            color: #0056b3;
+        }
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Orçamento de Serviço</h1>
+</div>
+
+<table class="info-section">
+    <tr>
+        <td class="info-label">Cliente:</td>
+        <td th:text="${budget.client.name}">Nome do Cliente</td>
+        <td class="info-label">Veículo:</td>
+        <td th:text="${budget.vehicle.model} + ' - ' + ${budget.vehicle.licensePlate}">Modelo - Placa</td>
+    </tr>
+    <tr>
+        <td class="info-label">Documento:</td>
+        <td th:text="${budget.client.document}">000.000.000-00</td>
+        <td class="info-label">Telefone:</td>
+        <td th:text="${budget.client.phone}">(00) 00000-0000</td>
+    </tr>
+</table>
+
+<h3 th:if="${not #lists.isEmpty(budget.laborItems)}">Serviços</h3>
+<table class="table" th:if="${not #lists.isEmpty(budget.laborItems)}">
+    <thead>
+    <tr>
+        <th>Descrição</th>
+        <th class="right">Valor (R$)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="item : ${budget.laborItems}">
+        <td th:text="${item.description}">Troca de Óleo</td>
+        <td class="right" th:text="${#numbers.formatDecimal(item.price, 1, 'POINT', 2, 'COMMA')}">100,00</td>
+    </tr>
+    </tbody>
+</table>
+
+<h3 th:if="${not #lists.isEmpty(budget.materialItems)}">Peças e Insumos</h3>
+<table class="table" th:if="${not #lists.isEmpty(budget.materialItems)}">
+    <thead>
+    <tr>
+        <th>Descrição</th>
+        <th class="right">Qtd.</th>
+        <th class="right">V. Unitário (R$)</th>
+        <th class="right">V. Total (R$)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="item : ${budget.materialItems}">
+        <td th:text="${item.materialName}">Filtro de Óleo</td>
+        <td class="right" th:text="${item.quantity}">1</td>
+        <td class="right" th:text="${#numbers.formatDecimal(item.unitPrice, 1, 'POINT', 2, 'COMMA')}">50,00</td>
+        <td class="right" th:text="${#numbers.formatDecimal(item.totalPrice, 1, 'POINT', 2, 'COMMA')}">50,00</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="totals clearfix">
+    <table>
+        <tr>
+            <th>Total de Serviços:</th>
+            <td th:text="'R$ ' + ${#numbers.formatDecimal(budget.totalLaborPrice, 1, 'POINT', 2, 'COMMA')}">0,00</td>
+        </tr>
+        <tr>
+            <th>Total de Peças:</th>
+            <td th:text="'R$ ' + ${#numbers.formatDecimal(budget.totalMaterialPrice, 1, 'POINT', 2, 'COMMA')}">0,00</td>
+        </tr>
+        <tr>
+            <th class="grand-total">Total do Orçamento:</th>
+            <td class="grand-total" th:text="'R$ ' + ${#numbers.formatDecimal(budget.totalBudgetPrice, 1, 'POINT', 2, 'COMMA')}">0,00</td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>

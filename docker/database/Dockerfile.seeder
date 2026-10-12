@@ -1,0 +1,4 @@
+FROM postgres:15-alpine
+
+# Copia o script para dentro da imagem
+COPY init.sql /seed/init.sql

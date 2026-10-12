@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mecanicadm-workorder-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: mecanicadm-workorder-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB:-mecanicadm_workorder}
+      - DB_USER=${POSTGRES_USER:-admin}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - JWT_SECRET=${JWT_SECRET:-development}
+      - BUDGET_BASE_URL=${BUDGET_BASE_URL:-http://localhost:8080/api}
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-username}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-password}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  seeder:
+    image: postgres:15-alpine
+    container_name: mecanicadm-workorder-seeder
+    depends_on:
+      - api
+    volumes:
+      - ./docker/database/init.sql:/seed/init.sql:ro
+    command: >
+      sh -c '
+        until PGPASSWORD=${POSTGRES_PASSWORD} psql -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} -tAc "SELECT 1 FROM flyway_schema_history WHERE success = true AND script = '\''V08__add_indexes_for_work_order_execution_report.sql'\''" | grep -q 1; do
+          echo "Aguardando o Flyway concluir as migrations...";
+          sleep 3;
+        done;
+      
+        echo "Flyway concluído! Rodando o init.sql...";
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /seed/init.sql
+      '
+
+volumes:
+  postgres_data:

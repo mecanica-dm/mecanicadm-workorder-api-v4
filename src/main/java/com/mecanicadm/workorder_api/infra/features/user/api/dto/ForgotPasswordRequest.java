@@ -1,0 +1,8 @@
+package com.mecanicadm.workorder_api.infra.features.user.api.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
+public record ForgotPasswordRequest(
+        @NotBlank @Email String email
+) {}

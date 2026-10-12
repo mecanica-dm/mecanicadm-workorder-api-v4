@@ -1,0 +1,43 @@
+flowchart LR
+    TRIGGER[Disparo do Workflow] --> COND{Evento}
+    COND -->|push| M1[Branch: main]
+    COND -->|pull_request| PR[Pipeline PR]
+    COND -->|workflow_dispatch| WD[Manual]
+
+    M1 --> BUILD
+    PR --> BUILD
+    WD --> BUILD
+
+    subgraph BUILD[build-and-test]
+        direction LR
+        A1[Checkout]
+        A2[Setup JDK 21]
+        A3[Build e Testes]
+        A4[Análise Sonar]
+        A1 --> A2 --> A3 --> A4
+    end
+
+    subgraph SEC[security-scan]
+        direction LR
+        S1[Checkout]
+        S2[Subir aplicação]
+        S3[ZAP Scan OpenAPI]
+        S4[Upload Relatório]
+        S5[Parar containers]
+        S1 --> S2 --> S3 --> S4 --> S5
+    end
+
+    BUILD -->|sucesso| SEC
+
+    subgraph PUB[publish-and-deploy]
+        direction LR
+        P1[Login Docker Hub]
+        P2[Build e push imagem]
+        P3[Disparar deploy K8s]
+        P1 --> P2 --> P3
+    end
+
+    SEC -->|sucesso| GATE{Em main?}
+    GATE -->|sim| PUB
+    GATE -->|não| FIM1[Fim - sem deploy]
+    PUB --> FIM2[Deploy no K8s]
