@@ -73,45 +73,9 @@ public class WorkOrderExceptions {
         }
     }
 
-    public static class BudgetNotFound extends DomainExceptionCore {
-        public BudgetNotFound() {
-            super("work.order.budget.not.found", 404);
-        }
-    }
-
-    public static class BudgetDecisionInvalid extends DomainExceptionCore {
-        public BudgetDecisionInvalid(String decision) {
-            super("work.order.budget.decision.invalid", 400, decision);
-        }
-    }
-
-    public static class BudgetObservationRequired extends DomainExceptionCore {
-        public BudgetObservationRequired() {
-            super("work.order.budget.observation.required", 400);
-        }
-    }
-
-    public static class BudgetNotWaitingDecision extends DomainExceptionCore {
-        public BudgetNotWaitingDecision() {
-            super("work.order.budget.not.waiting.decision", 400);
-        }
-    }
-
     public static class InvalidReportPeriod extends DomainExceptionCore {
         public InvalidReportPeriod() {
             super("work.order.report.period.invalid", 400);
-        }
-    }
-
-    public static class BudgetTotalPriceInvalid extends DomainExceptionCore {
-        public BudgetTotalPriceInvalid() {
-            super("work.order.budget.total.price.invalid", 400);
-        }
-    }
-
-    public static class BudgetStatusInvalid extends DomainExceptionCore {
-        public BudgetStatusInvalid() {
-            super("work.order.budget.status.invalid", 400);
         }
     }
 
@@ -130,21 +94,6 @@ public class WorkOrderExceptions {
     public static class WorkOrderIdRequired extends DomainExceptionCore {
         public WorkOrderIdRequired() {
             super("work.order.id.required", 400);
-        }
-    }
-
-    public static class BudgetTokenNotFound extends DomainExceptionCore {
-        public BudgetTokenNotFound() {
-            super("work.order.budget.token.not.found", 404);
-        }
-    }
-
-    public static class BudgetTokenInvalid extends DomainExceptionCore {
-        private BudgetTokenInvalid(String detail) {
-            super("work.order.budget.token.invalid", 400, detail);
-        }
-        public static BudgetTokenInvalid of(String detail) {
-            return new BudgetTokenInvalid(detail);
         }
     }
 }

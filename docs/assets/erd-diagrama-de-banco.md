@@ -16,9 +16,7 @@ erDiagram
 
     WORK_ORDERS ||--o{ WORK_ORDER_LABOR_ITEMS : "tem"
     WORK_ORDERS ||--o{ WORK_ORDER_MATERIAL_ITEMS : "tem"
-    WORK_ORDERS ||--o{ WORK_ORDER_BUDGETS : "tem"
     WORK_ORDERS ||--o{ STOCK_MOVEMENTS : "registra"
-    WORK_ORDERS ||--o{ BUDGET_DECISION_TOKENS : "gera"
 
     USERS {
         uuid id PK
@@ -113,13 +111,6 @@ erDiagram
         int quantity
     }
 
-    WORK_ORDER_BUDGETS {
-        uuid work_order_id PK,FK
-        decimal total_price
-        varchar status
-        text observation
-    }
-
     STOCK_MOVEMENTS {
         uuid id PK
         uuid material_id FK
@@ -129,13 +120,5 @@ erDiagram
         timestamp date_created
         timestamp date_updated
         timestamp deleted_at
-    }
-
-    BUDGET_DECISION_TOKENS {
-        uuid id PK
-        uuid work_order_id FK
-        varchar token UK
-        boolean used
-        timestamp created_at
     }
 ```

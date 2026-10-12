@@ -23,7 +23,6 @@ public record WorkOrderResponse(
         Long totalExecutionTimeInMinutes,
         List<WorkOrderLaborItemResponse> laborItems,
         List<WorkOrderMaterialItemResponse> materialItems,
-        WorkOrderBudgetResponse budget,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -39,7 +38,6 @@ public record WorkOrderResponse(
                 calculateTotalExecutionTime(workOrder.getExecutionStartAt().orElse(null), workOrder.getExecutionEndAt().orElse(null)),
                 workOrder.getLaborItems().stream().map(WorkOrderLaborItemResponse::from).toList(),
                 workOrder.getMaterialItems().stream().map(WorkOrderMaterialItemResponse::from).toList(),
-                workOrder.getBudget().map(WorkOrderBudgetResponse::from).orElse(null),
                 workOrder.getDateCreated(),
                 workOrder.getDateUpdated()
         );

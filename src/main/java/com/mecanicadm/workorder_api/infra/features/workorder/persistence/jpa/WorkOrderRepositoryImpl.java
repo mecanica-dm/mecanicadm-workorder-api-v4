@@ -1,7 +1,6 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.persistence.jpa;
 
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
-import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrderBudget;
 import com.mecanicadm.workorder_api.core.workorder.domain.enums.WorkOrderStatus;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.*;
 import com.mecanicadm.workorder_api.infra.features.workorder.persistence.entity.WorkOrderJpaEntity;
@@ -27,16 +26,13 @@ public class WorkOrderRepositoryImpl implements WorkOrderGateway {
     private final WorkOrderJpaRepository jpaRepository;
     private final WorkOrderLaborItemJpaRepository laborItemJpaRepository;
     private final WorkOrderMaterialItemJpaRepository materialItemJpaRepository;
-    private final WorkOrderBudgetJpaRepository budgetJpaRepository;
 
     public WorkOrderRepositoryImpl(WorkOrderJpaRepository jpaRepository,
                                    WorkOrderLaborItemJpaRepository laborItemJpaRepository,
-                                   WorkOrderMaterialItemJpaRepository materialItemJpaRepository,
-                                   WorkOrderBudgetJpaRepository budgetJpaRepository) {
+                                   WorkOrderMaterialItemJpaRepository materialItemJpaRepository) {
         this.jpaRepository = jpaRepository;
         this.laborItemJpaRepository = laborItemJpaRepository;
         this.materialItemJpaRepository = materialItemJpaRepository;
-        this.budgetJpaRepository = budgetJpaRepository;
     }
 
     @Override
@@ -57,15 +53,6 @@ public class WorkOrderRepositoryImpl implements WorkOrderGateway {
         WorkOrderJpaEntity entity = WorkOrderJpaMapper.toEntity(workOrder);
         entity = jpaRepository.save(entity);
         return WorkOrderJpaMapper.toDomainLight(entity);
-    }
-
-    @Override
-    public void saveBudget(WorkOrderBudget budget) {
-        if (isNull(budget)) {
-            throw new TechnicalException("error.technical.entity.null", "WorkOrderBudget", "salvar");
-        }
-        var entity = WorkOrderBudgetJpaMapper.toEntity(budget);
-        budgetJpaRepository.save(entity);
     }
 
     @Override
@@ -93,9 +80,7 @@ public class WorkOrderRepositoryImpl implements WorkOrderGateway {
                 laborItemJpaRepository.findByWorkOrderId(entity.getId()));
         var materialItems = WorkOrderMaterialItemJpaMapper.toDomainSet(
                 materialItemJpaRepository.findByWorkOrderId(entity.getId()));
-        var budget = budgetJpaRepository.findById(entity.getId())
-                .map(WorkOrderBudgetJpaMapper::toDomain).orElse(null);
-        return WorkOrderJpaMapper.toDomain(entity, laborItems, materialItems, budget);
+        return WorkOrderJpaMapper.toDomain(entity, laborItems, materialItems);
     }
 
     @Override

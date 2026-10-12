@@ -29,12 +29,6 @@ public interface WorkOrderWorkflowOpenApi {
     @ApiResponse(responseCode = "404", description = "Ordem de servico nao encontrada", content = @Content)
     ResponseEntity<Void> finishExecution(UUID id);
 
-    @Operation(summary = "Registrar pagamento da ordem de servico", description = "Registra ordem de serviço como paga")
-    @ApiResponse(responseCode = "204", description = "Pagamento registrado com sucesso")
-    @ApiResponse(responseCode = "400", description = "Status invalido para pagamento", content = @Content)
-    @ApiResponse(responseCode = "404", description = "Ordem de servico nao encontrada", content = @Content)
-    ResponseEntity<Void> recordPayment(UUID id);
-
     @Operation(summary = "Registrar retirada do veiculo", description = "Registra entrega do veículo ao cliente da ordem de serviço")
     @ApiResponse(responseCode = "204", description = "Retirada registrada com sucesso")
     @ApiResponse(responseCode = "400", description = "Status invalido para retirada", content = @Content)

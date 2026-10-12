@@ -107,10 +107,6 @@ INSERT INTO work_order_labor_items (id, work_order_id, labor_id, status, executi
 ('aa11aa11-4444-4aa1-8a11-aaaaaaaa4444', 'aa11aa11-1111-4aa1-8a11-aaaaaaaa1111', '1b913e8a-81cf-41c3-bbbd-6cd8342460e7', 'EXECUTION_COMPLETED', now() - interval '2 hours', now() - interval '45 minutes')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO work_order_budgets (work_order_id, total_price, status) VALUES
-('aa11aa11-1111-4aa1-8a11-aaaaaaaa1111', 325.00, 'APPROVED')
-ON CONFLICT DO NOTHING;
-
 INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, date_created, date_updated) VALUES
 ('aa11aa11-5555-4aa1-8a11-aaaaaaaa5555', 'b3c1b691-8d2b-42ea-a4b5-ea93db622616', 'aa11aa11-1111-4aa1-8a11-aaaaaaaa1111', 2, 'REDUCTION', now() - interval '2 hours', now() - interval '2 hours'),
 ('aa11aa11-6666-4aa1-8a11-aaaaaaaa6666', '5c5450e1-236b-43d9-95a7-96a1a1f73b15', 'aa11aa11-1111-4aa1-8a11-aaaaaaaa1111', 1, 'REDUCTION', now() - interval '2 hours', now() - interval '2 hours')
@@ -144,10 +140,6 @@ INSERT INTO work_order_labor_items (id, work_order_id, labor_id, status) VALUES
 ('cc33cc33-5555-4cc3-8c33-cccccccccccc', 'cc33cc33-3333-4cc3-8c33-cccccccccccc', '3a95610e-d748-4ff5-b901-21822a101b7a', 'AWAITING_EXECUTION')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO work_order_budgets (work_order_id, total_price, status) VALUES
-('cc33cc33-3333-4cc3-8c33-cccccccccccc', 1080.00, 'PENDING')
-ON CONFLICT DO NOTHING;
-
 INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, date_created, date_updated) VALUES
 ('cc33cc33-7777-4cc3-8c33-cccccccc7777', 'd96a5b9e-b9b5-419b-ab4e-a129ef31ea14', 'cc33cc33-3333-4cc3-8c33-cccccccccccc', 4, 'REDUCTION', now() - interval '1 days', now() - interval '1 days')
 ON CONFLICT DO NOTHING;
@@ -168,10 +160,6 @@ INSERT INTO work_order_material_items (id, work_order_id, material_id, quantity)
 ('dd44dd44-6666-4dd4-8d44-dddddddddddd', 'dd44dd44-4444-4dd4-8d44-dddddddddddd', 'eab6dfa6-302f-48d1-ba71-eb7f1b72e807', 1)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO work_order_budgets (work_order_id, total_price, status) VALUES
-('dd44dd44-4444-4dd4-8d44-dddddddddddd', 335.00, 'WAITING_DECISION')
-ON CONFLICT DO NOTHING;
-
 INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, date_created, date_updated) VALUES
 ('dd44dd44-7777-4dd4-8d44-dddddddddd77', 'eab6dfa6-302f-48d1-ba71-eb7f1b72e807', 'dd44dd44-4444-4dd4-8d44-dddddddddddd', 1, 'REDUCTION', now() - interval '4 days', now() - interval '4 days')
 ON CONFLICT DO NOTHING;
@@ -190,10 +178,6 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO work_order_labor_items (id, work_order_id, labor_id, status) VALUES
 ('ee55ee55-7777-4ee5-8e55-eeeeeeee7777', 'ee55ee55-5555-4ee5-8e55-eeeeeeeeeeee', 'cc0f225d-0043-4dc9-9801-b7ea38340d21', 'AWAITING_EXECUTION')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO work_order_budgets (work_order_id, total_price, status) VALUES
-('ee55ee55-5555-4ee5-8e55-eeeeeeeeeeee', 330.00, 'PENDING')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, date_created, date_updated) VALUES
@@ -217,10 +201,6 @@ INSERT INTO work_order_labor_items (id, work_order_id, labor_id, status, executi
 ('ff66ff66-8888-4ff6-8f66-ffffffff8888', 'ff66ff66-6666-4ff6-8f66-ffffffff6666', '3a95610e-d748-4ff5-b901-21822a101b7a', 'EXECUTION_COMPLETED', now() - interval '14 days', now() - interval '10 days')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO work_order_budgets (work_order_id, total_price, status) VALUES
-('ff66ff66-6666-4ff6-8f66-ffffffff6666', 1080.00, 'APPROVED')
-ON CONFLICT DO NOTHING;
-
 INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, date_created, date_updated) VALUES
 ('ff66ff66-9999-4ff6-8f66-ffffffff9999', 'd96a5b9e-b9b5-419b-ab4e-a129ef31ea14', 'ff66ff66-6666-4ff6-8f66-ffffffff6666', 4, 'REDUCTION', now() - interval '14 days', now() - interval '14 days')
 ON CONFLICT DO NOTHING;
@@ -240,10 +220,6 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO work_order_labor_items (id, work_order_id, labor_id, status, execution_start_at, execution_end_at) VALUES
 ('66776677-aaaa-4667-8677-66666666aaaa', '66776677-7777-4667-8677-666666667777', '7c8449c2-555e-4ef5-b6d4-8395995cfd0a', 'EXECUTION_COMPLETED', now() - interval '3 hours', now() - interval '2 hours')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO work_order_budgets (work_order_id, total_price, status) VALUES
-('66776677-7777-4667-8677-666666667777', 600.00, 'APPROVED')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, date_created, date_updated) VALUES
@@ -266,10 +242,6 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO work_order_labor_items (id, work_order_id, labor_id, status, execution_start_at, execution_end_at) VALUES
 ('88886688-bbbb-4888-8888-8888888888bb', '88886688-8888-4888-8888-888888888888', '1b913e8a-81cf-41c3-bbbd-6cd8342460e7', 'EXECUTION_COMPLETED', now() - interval '1 day', now() - interval '23 hours')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO work_order_budgets (work_order_id, total_price, status) VALUES
-('88886688-8888-4888-8888-888888888888', 175.00, 'APPROVED')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, date_created, date_updated) VALUES

@@ -1,7 +1,6 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.persistence.jpa;
 
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
-import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrderBudget;
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrderLaborItem;
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrderMaterialItem;
 import com.mecanicadm.workorder_api.infra.features.workorder.persistence.entity.WorkOrderJpaEntity;
@@ -16,7 +15,7 @@ public class WorkOrderJpaMapper {
     private WorkOrderJpaMapper() {
     }
 
-    public static WorkOrder toDomain(WorkOrderJpaEntity entity, Set<WorkOrderLaborItem> laborItems, Set<WorkOrderMaterialItem> materialItems, WorkOrderBudget budget) {
+    public static WorkOrder toDomain(WorkOrderJpaEntity entity, Set<WorkOrderLaborItem> laborItems, Set<WorkOrderMaterialItem> materialItems) {
         if (isNull(entity)) return null;
         return WorkOrder.restore(
                 entity.getId(),
@@ -28,7 +27,6 @@ public class WorkOrderJpaMapper {
                 entity.getExecutionEndAt().orElse(null),
                 laborItems,
                 materialItems,
-                budget,
                 entity.getDateCreated(),
                 entity.getDateUpdated(),
                 entity.getDeletedAt()

@@ -9,7 +9,6 @@ import com.mecanicadm.workorder_api.core.vehicle.exception.VehicleExceptions;
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderGateway;
 import com.mecanicadm.workorder_api.core.workorder.exception.WorkOrderExceptions;
-import com.mecanicadm.workorder_api.core.workorder.usecase.command.CalculateWorkOrderBudgetCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.DiagnoseWorkOrderCommand;
 
 import java.util.Objects;
@@ -19,16 +18,13 @@ public class DiagnoseWorkOrderUseCase implements UseCase<DiagnoseWorkOrderComman
     private final WorkOrderGateway gateway;
     private final ClientGateway clientGateway;
     private final VehicleGateway vehicleGateway;
-    private final CalculateWorkOrderBudgetUseCase calculateWorkOrderBudgetUseCase;
 
     public DiagnoseWorkOrderUseCase(WorkOrderGateway gateway,
                                     ClientGateway clientGateway,
-                                    VehicleGateway vehicleGateway,
-                                    CalculateWorkOrderBudgetUseCase calculateWorkOrderBudgetUseCase) {
+                                    VehicleGateway vehicleGateway) {
         this.gateway = gateway;
         this.clientGateway = clientGateway;
         this.vehicleGateway = vehicleGateway;
-        this.calculateWorkOrderBudgetUseCase = calculateWorkOrderBudgetUseCase;
     }
 
     public UUID execute(DiagnoseWorkOrderCommand cmd) {
@@ -40,7 +36,6 @@ public class DiagnoseWorkOrderUseCase implements UseCase<DiagnoseWorkOrderComman
         workOrder.markAsDiagnosed();
         gateway.update(workOrder);
 
-        calculateWorkOrderBudgetUseCase.execute(new CalculateWorkOrderBudgetCommand(workOrder.getId()));
         return workOrder.getId();
     }
 

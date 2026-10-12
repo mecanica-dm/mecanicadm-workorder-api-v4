@@ -33,16 +33,8 @@ CREATE TABLE IF NOT EXISTS work_order_material_items (
     CONSTRAINT fk_material FOREIGN KEY (material_id) REFERENCES materials(id)
 );
 
-CREATE TABLE IF NOT EXISTS work_order_budgets (
-    work_order_id UUID PRIMARY KEY,
-    total_price DECIMAL(19, 2) NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    CONSTRAINT fk_work_order_budgets_work_order FOREIGN KEY (work_order_id) REFERENCES work_orders(id)
-);
-
 CREATE INDEX IF NOT EXISTS idx_work_orders_status ON work_orders(status);
 CREATE INDEX IF NOT EXISTS idx_work_orders_client_id ON work_orders(client_id);
 CREATE INDEX IF NOT EXISTS idx_work_orders_vehicle_id ON work_orders(vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_work_order_labor_items_work_order_id ON work_order_labor_items(work_order_id);
 CREATE INDEX IF NOT EXISTS idx_work_order_material_items_work_order_id ON work_order_material_items(work_order_id);
-CREATE INDEX IF NOT EXISTS idx_work_order_budgets_work_order_id ON work_order_budgets(work_order_id);

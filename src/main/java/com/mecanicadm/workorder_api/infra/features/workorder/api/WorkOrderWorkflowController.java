@@ -3,12 +3,10 @@ package com.mecanicadm.workorder_api.infra.features.workorder.api;
 import com.mecanicadm.workorder_api.core.workorder.usecase.DeliverWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.DiagnoseWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.FinishWorkOrderExecutionUseCase;
-import com.mecanicadm.workorder_api.core.workorder.usecase.RecordWorkOrderPaymentUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.StartWorkOrderExecutionUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.DeliverWorkOrderCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.DiagnoseWorkOrderCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.FinishWorkOrderExecutionCommand;
-import com.mecanicadm.workorder_api.core.workorder.usecase.command.RecordWorkOrderPaymentCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.StartWorkOrderExecutionCommand;
 import com.mecanicadm.workorder_api.infra.features.workorder.api.openapi.WorkOrderWorkflowOpenApi;
 import org.springframework.http.ResponseEntity;
@@ -26,18 +24,15 @@ public class WorkOrderWorkflowController implements WorkOrderWorkflowOpenApi {
     private final DiagnoseWorkOrderUseCase diagnoseWorkOrderUseCase;
     private final StartWorkOrderExecutionUseCase startWorkOrderExecutionUseCase;
     private final FinishWorkOrderExecutionUseCase finishWorkOrderExecutionUseCase;
-    private final RecordWorkOrderPaymentUseCase recordWorkOrderPaymentUseCase;
     private final DeliverWorkOrderUseCase deliverWorkOrderUseCase;
 
     public WorkOrderWorkflowController(DiagnoseWorkOrderUseCase diagnoseWorkOrderUseCase,
                                        StartWorkOrderExecutionUseCase startWorkOrderExecutionUseCase,
                                        FinishWorkOrderExecutionUseCase finishWorkOrderExecutionUseCase,
-                                       RecordWorkOrderPaymentUseCase recordWorkOrderPaymentUseCase,
                                        DeliverWorkOrderUseCase deliverWorkOrderUseCase) {
         this.diagnoseWorkOrderUseCase = diagnoseWorkOrderUseCase;
         this.startWorkOrderExecutionUseCase = startWorkOrderExecutionUseCase;
         this.finishWorkOrderExecutionUseCase = finishWorkOrderExecutionUseCase;
-        this.recordWorkOrderPaymentUseCase = recordWorkOrderPaymentUseCase;
         this.deliverWorkOrderUseCase = deliverWorkOrderUseCase;
     }
 
@@ -59,13 +54,6 @@ public class WorkOrderWorkflowController implements WorkOrderWorkflowOpenApi {
     @PostMapping("/finish-execution")
     public ResponseEntity<Void> finishExecution(@PathVariable UUID id) {
         finishWorkOrderExecutionUseCase.execute(new FinishWorkOrderExecutionCommand(id));
-        return ResponseEntity.noContent().build();
-    }
-
-    @Override
-    @PostMapping("/payment")
-    public ResponseEntity<Void> recordPayment(@PathVariable UUID id) {
-        recordWorkOrderPaymentUseCase.execute(new RecordWorkOrderPaymentCommand(id));
         return ResponseEntity.noContent().build();
     }
 
