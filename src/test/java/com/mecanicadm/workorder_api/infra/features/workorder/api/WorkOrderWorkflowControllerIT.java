@@ -3,7 +3,6 @@ package com.mecanicadm.workorder_api.infra.features.workorder.api;
 import com.mecanicadm.workorder_api.core.workorder.usecase.DeliverWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.DiagnoseWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.FinishWorkOrderExecutionUseCase;
-import com.mecanicadm.workorder_api.core.workorder.usecase.RecordWorkOrderPaymentUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.StartWorkOrderExecutionUseCase;
 import com.mecanicadm.workorder_api.testutils.AbstractIntegrationTest;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
@@ -40,9 +39,6 @@ class WorkOrderWorkflowControllerIT extends AbstractIntegrationTest {
 
     @MockitoBean
     private FinishWorkOrderExecutionUseCase finishWorkOrderExecutionUseCase;
-
-    @MockitoBean
-    private RecordWorkOrderPaymentUseCase recordWorkOrderPaymentUseCase;
 
     @MockitoBean
     private DeliverWorkOrderUseCase deliverWorkOrderUseCase;
@@ -109,11 +105,11 @@ class WorkOrderWorkflowControllerIT extends AbstractIntegrationTest {
         RestAssuredMockMvc.given()
                 .postProcessors(csrf())
                 .when()
-                .post("/work-orders/{id}/step/payment", workOrderId)
+                .post("/work-orders/{id}/step/deliver", workOrderId)
                 .then()
                 .statusCode(HttpStatus.NO_CONTENT.value());
 
-        verify(recordWorkOrderPaymentUseCase, times(1)).execute(any());
+        verify(deliverWorkOrderUseCase, times(1)).execute(any());
     }
 
     @Test
