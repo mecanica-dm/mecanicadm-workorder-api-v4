@@ -23,6 +23,8 @@ public interface WorkOrderGateway {
 
     WorkOrderPageResult findAll(WorkOrderPageQuery query);
 
+    Optional<WorkOrderDetails> findDetailsById(UUID id);
+
     BigDecimal sumMaterialsTotalByWorkOrderId(UUID workOrderId);
 
     BigDecimal sumLaborTotalByWorkOrderId(UUID workOrderId);

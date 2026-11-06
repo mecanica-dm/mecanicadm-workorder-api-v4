@@ -16,6 +16,40 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: mecanicadm-workorder-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq-init:
+    image: curlimages/curl:8.10.1
+    container_name: mecanicadm-workorder-rabbitmq-init
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./messaging/workorder-definitions.json:/definitions.json:ro
+    entrypoint: [ "sh", "-c" ]
+    command:
+      - >
+        curl -sf --retry 10 --retry-delay 3 --retry-connrefused
+        -u "${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}"
+        -H "content-type: application/json"
+        -X POST http://rabbitmq:15672/api/definitions
+        --data @/definitions.json
+        && echo "Topologia da workorder aplicada"
+    restart: "no"
+
   api:
     build: .
     container_name: mecanicadm-workorder-api
@@ -25,7 +59,7 @@ services:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-default}
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_NAME=${POSTGRES_DB:-mecanicadm_workorder}
+      - DB_NAME=${POSTGRES_DB:-workorder_db}
       - DB_USER=${POSTGRES_USER:-admin}
       - DB_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - JWT_SECRET=${JWT_SECRET:-development}
@@ -33,9 +67,20 @@ services:
       - MAIL_PORT=${MAIL_PORT:-587}
       - MAIL_USERNAME=${MAIL_USERNAME:-username}
       - MAIL_PASSWORD=${MAIL_PASSWORD:-password}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+      - OUTBOX_PUBLISHER_INTERVAL_MS=${OUTBOX_PUBLISHER_INTERVAL_MS:-1000}
+      - OUTBOX_BATCH_SIZE=${OUTBOX_BATCH_SIZE:-50}
+      - OUTBOX_RETENTION_DAYS=${OUTBOX_RETENTION_DAYS:-7}
     depends_on:
       db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-init:
+        condition: service_completed_successfully
 
   seeder:
     image: postgres:15-alpine
@@ -46,13 +91,13 @@ services:
       - ./docker/database/init.sql:/seed/init.sql:ro
     command: >
       sh -c '
-        until PGPASSWORD=${POSTGRES_PASSWORD} psql -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} -tAc "SELECT 1 FROM flyway_schema_history WHERE success = true AND script = '\''V08__add_indexes_for_work_order_execution_report.sql'\''" | grep -q 1; do
+        until PGPASSWORD=${POSTGRES_PASSWORD} psql -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} -tAc "SELECT 1 FROM flyway_schema_history WHERE success = true AND script = '\''V13__work_orders_requested_changes.sql'\''" | grep -q 1; do
           echo "Aguardando o Flyway concluir as migrations...";
           sleep 3;
         done;
       
         echo "Flyway concluído! Rodando o init.sql...";
-        PGPASSWORD=${POSTGRES_PASSWORD} psql -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /seed/init.sql
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} -v ON_ERROR_STOP=1 -f /seed/init.sql
       '
 
 volumes:

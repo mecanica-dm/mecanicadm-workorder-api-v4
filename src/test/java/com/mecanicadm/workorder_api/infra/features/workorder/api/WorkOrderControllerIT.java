@@ -50,9 +50,6 @@ class WorkOrderControllerIT extends AbstractIntegrationTest {
     private GetAllWorkOrderUseCase getAllWorkOrderUseCase;
 
     @MockitoBean
-    private SoftDeleteWorkOrderUseCase softDeleteWorkOrderUseCase;
-
-    @MockitoBean
     private GetWorkOrderStatusUseCase getWorkOrderStatusUseCase;
 
     @BeforeEach
@@ -124,7 +121,7 @@ class WorkOrderControllerIT extends AbstractIntegrationTest {
         WorkOrder workOrder = WorkOrder.restore(
                 workOrderId, clientId, "ABC-1234", "Troca de oleo",
                 WorkOrderStatus.RECEIVED, null, null,
-                new HashSet<>(), new HashSet<>(), null,
+                new HashSet<>(), new HashSet<>(),
                 LocalDateTime.now(), LocalDateTime.now(), null
         );
         when(getWorkOrderByIdUseCase.execute(any())).thenReturn(workOrder);
@@ -149,7 +146,7 @@ class WorkOrderControllerIT extends AbstractIntegrationTest {
         WorkOrder workOrder = WorkOrder.restore(
                 workOrderId, clientId, "ABC-1234", "Troca de oleo",
                 WorkOrderStatus.RECEIVED, null, null,
-                new HashSet<>(), new HashSet<>(), null,
+                new HashSet<>(), new HashSet<>(),
                 LocalDateTime.now(), LocalDateTime.now(), null
         );
         var pageResult = new WorkOrderPageResult(List.of(workOrder), 1L);
@@ -178,21 +175,5 @@ class WorkOrderControllerIT extends AbstractIntegrationTest {
                 .statusCode(HttpStatus.OK.value())
                 .body("id", equalTo(workOrderId.toString()))
                 .body("status", equalTo("DIAGNOSED"));
-    }
-
-    @Test
-    @WithMockUser
-    @DisplayName("Deve deletar work order e retornar 204 No Content")
-    void shouldDeleteWorkOrderAndReturn204() {
-        UUID workOrderId = UUID.randomUUID();
-
-        RestAssuredMockMvc.given()
-                .postProcessors(csrf())
-                .when()
-                .delete("/work-orders/{id}", workOrderId)
-                .then()
-                .statusCode(HttpStatus.NO_CONTENT.value());
-
-        verify(softDeleteWorkOrderUseCase, times(1)).execute(any());
     }
 }

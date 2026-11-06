@@ -6,7 +6,6 @@ import com.mecanicadm.workorder_api.infra.features.workorder.persistence.entity.
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;

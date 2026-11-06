@@ -1,0 +1,121 @@
+{
+  "exchanges": [
+    {
+      "name": "saga-output",
+      "vhost": "/",
+      "type": "headers",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "workorder-input",
+      "vhost": "/",
+      "type": "headers",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "workorder-output",
+      "vhost": "/",
+      "type": "headers",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "mecanicadm.dlx",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "workorder",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "mecanicadm.dlx",
+        "x-dead-letter-routing-key": "workorder.dlq"
+      }
+    },
+    {
+      "name": "workorder.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "saga-output",
+      "vhost": "/",
+      "destination": "workorder-input",
+      "destination_type": "exchange",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "workorder-input",
+      "vhost": "/",
+      "destination": "workorder",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {
+        "x-match": "all",
+        "eventType": "CancelWorkOrderIntegrationCommand"
+      }
+    },
+    {
+      "source": "workorder-input",
+      "vhost": "/",
+      "destination": "workorder",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {
+        "x-match": "all",
+        "eventType": "AuthorizeWorkOrderIntegrationCommand"
+      }
+    },
+    {
+      "source": "workorder-input",
+      "vhost": "/",
+      "destination": "workorder",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {
+        "x-match": "all",
+        "eventType": "ChangesRequestedWorkOrderIntegrationCommand"
+      }
+    },
+    {
+      "source": "workorder-input",
+      "vhost": "/",
+      "destination": "workorder",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {
+        "x-match": "all",
+        "eventType": "ReleaseWorkOrderVehicleIntegrationCommand"
+      }
+    },
+    {
+      "source": "mecanicadm.dlx",
+      "vhost": "/",
+      "destination": "workorder.dlq",
+      "destination_type": "queue",
+      "routing_key": "workorder.dlq",
+      "arguments": {}
+    }
+  ]
+}

@@ -29,7 +29,8 @@ public class WorkOrderJpaMapper {
                 materialItems,
                 entity.getDateCreated(),
                 entity.getDateUpdated(),
-                entity.getDeletedAt()
+                entity.getDeletedAt(),
+                entity.getRequestedChanges()
         );
     }
 
@@ -45,10 +46,10 @@ public class WorkOrderJpaMapper {
                 entity.getExecutionEndAt().orElse(null),
                 new HashSet<>(),
                 new HashSet<>(),
-                null,
                 entity.getDateCreated(),
                 entity.getDateUpdated(),
-                entity.getDeletedAt()
+                entity.getDeletedAt(),
+                entity.getRequestedChanges()
         );
     }
 
@@ -61,7 +62,8 @@ public class WorkOrderJpaMapper {
                 domain.getDescription(),
                 domain.getStatus(),
                 domain.getExecutionStartAt().orElse(null),
-                domain.getExecutionEndAt().orElse(null)
+                domain.getExecutionEndAt().orElse(null),
+                domain.getRequestedChanges()
         );
         entity.setDateCreated(domain.getDateCreated());
         entity.setDateUpdated(domain.getDateUpdated());

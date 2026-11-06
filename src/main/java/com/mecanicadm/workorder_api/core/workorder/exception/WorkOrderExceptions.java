@@ -43,6 +43,12 @@ public class WorkOrderExceptions {
         }
     }
 
+    public static class NotEditable extends DomainExceptionCore {
+        public NotEditable(String status) {
+            super("work.order.status.not.editable", 409, status);
+        }
+    }
+
     public static class LaborCannotStartIfNotInExecution extends DomainExceptionCore {
         public LaborCannotStartIfNotInExecution() {
             super("work.order.labor.start.not.in.execution", 400);

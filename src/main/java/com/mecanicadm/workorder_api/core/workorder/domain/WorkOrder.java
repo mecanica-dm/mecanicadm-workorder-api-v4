@@ -13,9 +13,9 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
-import static org.springframework.util.StringUtils.hasText;
 
 public class WorkOrder extends AuditDomain {
 
@@ -38,6 +38,8 @@ public class WorkOrder extends AuditDomain {
     private Set<WorkOrderLaborItem> laborItems = new HashSet<>();
 
     private Set<WorkOrderMaterialItem> materialItems = new HashSet<>();
+
+    private String requestedChanges;
 
     private WorkOrder(UUID id, UUID clientId, String vehicleId, String description, WorkOrderStatus status) {
         this.id = id;
@@ -64,25 +66,31 @@ public class WorkOrder extends AuditDomain {
 
     @SuppressWarnings("java:S107")
     public static WorkOrder restore(UUID id, UUID clientId, String vehicleId, String description, WorkOrderStatus status, LocalDateTime executionStartAt, LocalDateTime executionEndAt, Set<WorkOrderLaborItem> laborItems, Set<WorkOrderMaterialItem> materialItems, LocalDateTime dateCreated, LocalDateTime dateUpdated, LocalDateTime deletedAt) {
+        return restore(id, clientId, vehicleId, description, status, executionStartAt, executionEndAt, laborItems, materialItems, dateCreated, dateUpdated, deletedAt, null);
+    }
+
+    @SuppressWarnings("java:S107")
+    public static WorkOrder restore(UUID id, UUID clientId, String vehicleId, String description, WorkOrderStatus status, LocalDateTime executionStartAt, LocalDateTime executionEndAt, Set<WorkOrderLaborItem> laborItems, Set<WorkOrderMaterialItem> materialItems, LocalDateTime dateCreated, LocalDateTime dateUpdated, LocalDateTime deletedAt, String requestedChanges) {
         WorkOrder workOrder = new WorkOrder(id, clientId, vehicleId, description, status, executionStartAt, executionEndAt);
         workOrder.laborItems = new HashSet<>(laborItems);
         workOrder.materialItems = new HashSet<>(materialItems);
         workOrder.dateCreated = dateCreated;
         workOrder.dateUpdated = dateUpdated;
         workOrder.deletedAt = deletedAt;
+        workOrder.requestedChanges = requestedChanges;
         return workOrder;
     }
 
     public void update(UUID clientId, String vehicleId, String description) {
-        if (this.status != WorkOrderStatus.RECEIVED) {
-            throw new WorkOrderExceptions.InvalidStatus(this.status.name());
+        if (!isEditable()) {
+            throw new WorkOrderExceptions.NotEditable(this.status.name());
         }
 
         if (nonNull(clientId)) {
             this.clientId = clientId;
         }
 
-        if (hasText(vehicleId)) {
+        if (nonNull(vehicleId) && !vehicleId.isBlank()) {
             this.vehicleId = vehicleId;
         }
 
@@ -104,7 +112,7 @@ public class WorkOrder extends AuditDomain {
     }
 
     public void markAsDiagnosed() {
-        if (this.status != WorkOrderStatus.RECEIVED) {
+        if (this.status != WorkOrderStatus.RECEIVED && this.status != WorkOrderStatus.CHANGES_REQUESTED) {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.DIAGNOSED.name());
         }
         this.status = WorkOrderStatus.DIAGNOSED;
@@ -112,7 +120,32 @@ public class WorkOrder extends AuditDomain {
     }
 
     public void markAsAwaitingExecution() {
+        if (this.status != WorkOrderStatus.DIAGNOSED) {
+            throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.AWAITING_EXECUTION.name());
+        }
         this.status = WorkOrderStatus.AWAITING_EXECUTION;
+        log.info("{\"message\": \"OS Autorizada para execução\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
+    }
+
+    public void releaseForDelivery() {
+        if (this.status == WorkOrderStatus.PAID) {
+            return;
+        }
+        if (this.status != WorkOrderStatus.EXECUTION_COMPLETED) {
+            throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.PAID.name());
+        }
+        this.status = WorkOrderStatus.PAID;
+        log.info("{\"message\": \"Pagamento confirmado, veículo liberado\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
+    }
+
+    public boolean isEditable() {
+        return this.status == WorkOrderStatus.RECEIVED || this.status == WorkOrderStatus.CHANGES_REQUESTED;
+    }
+
+    public void ensureEditable() {
+        if (!isEditable()) {
+            throw new WorkOrderExceptions.NotEditable(this.status.name());
+        }
     }
 
     public void markAsInExecution() {
@@ -170,12 +203,28 @@ public class WorkOrder extends AuditDomain {
                 .findFirst();
     }
 
-    public void markAsChangesRequested() {
+    public void markAsChangesRequested(String observation) {
+        if (this.status == WorkOrderStatus.DELIVERED || this.status == WorkOrderStatus.CANCELLED) {
+            throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.CHANGES_REQUESTED.name());
+        }
         this.status = WorkOrderStatus.CHANGES_REQUESTED;
+        this.requestedChanges = observation;
+        log.info("{\"message\": \"Alterações solicitadas na OS\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
 
     public void cancel() {
+        if (this.status != WorkOrderStatus.RECEIVED
+                && this.status != WorkOrderStatus.DIAGNOSED
+                && this.status != WorkOrderStatus.CHANGES_REQUESTED
+                && this.status != WorkOrderStatus.AWAITING_EXECUTION) {
+            throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.CANCELLED.name());
+        }
         this.status = WorkOrderStatus.CANCELLED;
+        log.info("{\"message\": \"OS Cancelada\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
+    }
+
+    public boolean isCancelled() {
+        return this.status == WorkOrderStatus.CANCELLED;
     }
 
     public UUID getId() {
@@ -212,5 +261,17 @@ public class WorkOrder extends AuditDomain {
 
     public Set<WorkOrderMaterialItem> getMaterialItems() {
         return Collections.unmodifiableSet(materialItems);
+    }
+
+    public Set<UUID> getLaborIds() {
+        return laborItems.stream().map(WorkOrderLaborItem::getLaborId).collect(Collectors.toSet());
+    }
+
+    public Set<UUID> getMaterialIds() {
+        return materialItems.stream().map(WorkOrderMaterialItem::getMaterialId).collect(Collectors.toSet());
+    }
+
+    public String getRequestedChanges() {
+        return requestedChanges;
     }
 }

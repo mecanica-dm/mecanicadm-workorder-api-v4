@@ -1,0 +1,1 @@
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS diagnosis_revision INTEGER NOT NULL DEFAULT 0;

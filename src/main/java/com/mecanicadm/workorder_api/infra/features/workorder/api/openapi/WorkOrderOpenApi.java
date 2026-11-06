@@ -48,9 +48,4 @@ public interface WorkOrderOpenApi {
             UUID clientId,
             String licensePlate,
             @ParameterObject Pageable pageable);
-
-    @Operation(summary = "Excluir ordem de serviço", description = "Remove uma ordem de serviço do sistema")
-    @ApiResponse(responseCode = "204", description = "Ordem de serviço excluída com sucesso")
-    @ApiResponse(responseCode = "404", description = "Ordem de serviço não encontrada", content = @Content)
-    ResponseEntity<Void> delete(UUID id);
 }

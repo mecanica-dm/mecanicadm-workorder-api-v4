@@ -1,7 +1,6 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.api;
 
 import com.mecanicadm.workorder_api.core.workorder.usecase.*;
-import com.mecanicadm.workorder_api.core.workorder.usecase.command.SoftDeleteWorkOrderCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.UpdateWorkOrderCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.query.GetWorkOrderByIdQuery;
 import com.mecanicadm.workorder_api.core.workorder.usecase.query.GetWorkOrderStatusQuery;
@@ -29,20 +28,17 @@ public class WorkOrderController implements WorkOrderOpenApi {
     private final UpdateWorkOrderUseCase updateWorkOrderUseCase;
     private final GetWorkOrderByIdUseCase getWorkOrderByIdUseCase;
     private final GetAllWorkOrderUseCase getAllWorkOrderUseCase;
-    private final SoftDeleteWorkOrderUseCase softDeleteWorkOrderUseCase;
     private final GetWorkOrderStatusUseCase getWorkOrderStatusUseCase;
 
     public WorkOrderController(CreateWorkOrderUseCase createWorkOrderUseCase,
                                UpdateWorkOrderUseCase updateWorkOrderUseCase,
                                GetWorkOrderByIdUseCase getWorkOrderByIdUseCase,
                                GetAllWorkOrderUseCase getAllWorkOrderUseCase,
-                               SoftDeleteWorkOrderUseCase softDeleteWorkOrderUseCase,
                                GetWorkOrderStatusUseCase getWorkOrderStatusUseCase) {
         this.createWorkOrderUseCase = createWorkOrderUseCase;
         this.updateWorkOrderUseCase = updateWorkOrderUseCase;
         this.getWorkOrderByIdUseCase = getWorkOrderByIdUseCase;
         this.getAllWorkOrderUseCase = getAllWorkOrderUseCase;
-        this.softDeleteWorkOrderUseCase = softDeleteWorkOrderUseCase;
         this.getWorkOrderStatusUseCase = getWorkOrderStatusUseCase;
     }
 
@@ -86,12 +82,5 @@ public class WorkOrderController implements WorkOrderOpenApi {
         var query = WorkOrderQueryMapper.toQuery(clientId, licensePlate, pageable);
         var result = getAllWorkOrderUseCase.execute(query);
         return ResponseEntity.ok(WorkOrderQueryMapper.toPage(result, pageable));
-    }
-
-    @Override
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        softDeleteWorkOrderUseCase.execute(new SoftDeleteWorkOrderCommand(id));
-        return ResponseEntity.noContent().build();
     }
 }

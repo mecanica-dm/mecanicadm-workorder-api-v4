@@ -1,5 +1,8 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.persistence.jpa;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderDetails;
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
 import com.mecanicadm.workorder_api.core.workorder.domain.enums.WorkOrderStatus;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.*;
@@ -26,13 +29,16 @@ public class WorkOrderRepositoryImpl implements WorkOrderGateway {
     private final WorkOrderJpaRepository jpaRepository;
     private final WorkOrderLaborItemJpaRepository laborItemJpaRepository;
     private final WorkOrderMaterialItemJpaRepository materialItemJpaRepository;
+    private final ObjectMapper objectMapper;
 
     public WorkOrderRepositoryImpl(WorkOrderJpaRepository jpaRepository,
                                    WorkOrderLaborItemJpaRepository laborItemJpaRepository,
-                                   WorkOrderMaterialItemJpaRepository materialItemJpaRepository) {
+                                   WorkOrderMaterialItemJpaRepository materialItemJpaRepository,
+                                   ObjectMapper objectMapper) {
         this.jpaRepository = jpaRepository;
         this.laborItemJpaRepository = laborItemJpaRepository;
         this.materialItemJpaRepository = materialItemJpaRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -105,6 +111,19 @@ public class WorkOrderRepositoryImpl implements WorkOrderGateway {
     @Override
     public BigDecimal sumMaterialsTotalByWorkOrderId(UUID workOrderId) {
         return jpaRepository.sumMaterialsTotalByWorkOrderId(workOrderId);
+    }
+
+    @Override
+    public Optional<WorkOrderDetails> findDetailsById(UUID id) {
+        String json = jpaRepository.findDetailsJsonById(id);
+        if (json == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(objectMapper.readValue(json, WorkOrderDetails.class));
+        } catch (JsonProcessingException e) {
+            throw new TechnicalException("error.technical.work-order.details", id.toString());
+        }
     }
 
     @Override

@@ -1,9 +1,11 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.api;
 
+import com.mecanicadm.workorder_api.core.workorder.usecase.CancelWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.DeliverWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.DiagnoseWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.FinishWorkOrderExecutionUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.StartWorkOrderExecutionUseCase;
+import com.mecanicadm.workorder_api.core.workorder.usecase.command.CancelWorkOrderCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.DeliverWorkOrderCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.DiagnoseWorkOrderCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.FinishWorkOrderExecutionCommand;
@@ -21,19 +23,23 @@ import java.util.UUID;
 @RequestMapping("/work-orders/{id}/step/")
 public class WorkOrderWorkflowController implements WorkOrderWorkflowOpenApi {
 
+
     private final DiagnoseWorkOrderUseCase diagnoseWorkOrderUseCase;
     private final StartWorkOrderExecutionUseCase startWorkOrderExecutionUseCase;
     private final FinishWorkOrderExecutionUseCase finishWorkOrderExecutionUseCase;
     private final DeliverWorkOrderUseCase deliverWorkOrderUseCase;
+    private final CancelWorkOrderUseCase cancelWorkOrderUseCase;
 
     public WorkOrderWorkflowController(DiagnoseWorkOrderUseCase diagnoseWorkOrderUseCase,
                                        StartWorkOrderExecutionUseCase startWorkOrderExecutionUseCase,
                                        FinishWorkOrderExecutionUseCase finishWorkOrderExecutionUseCase,
-                                       DeliverWorkOrderUseCase deliverWorkOrderUseCase) {
+                                       DeliverWorkOrderUseCase deliverWorkOrderUseCase,
+                                       CancelWorkOrderUseCase cancelWorkOrderUseCase) {
         this.diagnoseWorkOrderUseCase = diagnoseWorkOrderUseCase;
         this.startWorkOrderExecutionUseCase = startWorkOrderExecutionUseCase;
         this.finishWorkOrderExecutionUseCase = finishWorkOrderExecutionUseCase;
         this.deliverWorkOrderUseCase = deliverWorkOrderUseCase;
+        this.cancelWorkOrderUseCase = cancelWorkOrderUseCase;
     }
 
     @Override
@@ -63,5 +69,11 @@ public class WorkOrderWorkflowController implements WorkOrderWorkflowOpenApi {
         deliverWorkOrderUseCase.execute(new DeliverWorkOrderCommand(id));
         return ResponseEntity.noContent().build();
     }
-}
 
+    @Override
+    @PostMapping("/cancel")
+    public ResponseEntity<Void> cancel(@PathVariable UUID id) {
+        cancelWorkOrderUseCase.execute(new CancelWorkOrderCommand(id));
+        return ResponseEntity.noContent().build();
+    }
+}

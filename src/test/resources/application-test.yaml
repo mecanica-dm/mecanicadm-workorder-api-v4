@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+  flyway:
+    enabled: true
+    clean-disabled: false
+
+messaging:
+  outbox:
+    scheduler:
+      enabled: false

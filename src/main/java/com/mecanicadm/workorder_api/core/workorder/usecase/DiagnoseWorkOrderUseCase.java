@@ -1,15 +1,16 @@
 package com.mecanicadm.workorder_api.core.workorder.usecase;
 
-import com.mecanicadm.workorder_api.shared.usecase.UseCase;
-
 import com.mecanicadm.workorder_api.core.client.domain.port.ClientGateway;
 import com.mecanicadm.workorder_api.core.client.exception.ClientExceptions;
 import com.mecanicadm.workorder_api.core.vehicle.domain.port.VehicleGateway;
 import com.mecanicadm.workorder_api.core.vehicle.exception.VehicleExceptions;
+import com.mecanicadm.workorder_api.core.shared.messaging.MessagePublisher;
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
+import com.mecanicadm.workorder_api.core.workorder.domain.events.WorkOrderDiagnosedEvent;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderGateway;
 import com.mecanicadm.workorder_api.core.workorder.exception.WorkOrderExceptions;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.DiagnoseWorkOrderCommand;
+import com.mecanicadm.workorder_api.shared.usecase.UseCase;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -18,13 +19,16 @@ public class DiagnoseWorkOrderUseCase implements UseCase<DiagnoseWorkOrderComman
     private final WorkOrderGateway gateway;
     private final ClientGateway clientGateway;
     private final VehicleGateway vehicleGateway;
+    private final MessagePublisher publisher;
 
     public DiagnoseWorkOrderUseCase(WorkOrderGateway gateway,
                                     ClientGateway clientGateway,
-                                    VehicleGateway vehicleGateway) {
+                                    VehicleGateway vehicleGateway,
+                                    MessagePublisher publisher) {
         this.gateway = gateway;
         this.clientGateway = clientGateway;
         this.vehicleGateway = vehicleGateway;
+        this.publisher = publisher;
     }
 
     public UUID execute(DiagnoseWorkOrderCommand cmd) {
@@ -34,10 +38,13 @@ public class DiagnoseWorkOrderUseCase implements UseCase<DiagnoseWorkOrderComman
         validateDiagnosisPreconditions(workOrder);
 
         workOrder.markAsDiagnosed();
+
         gateway.update(workOrder);
+        publisher.publish(workOrder.getId(), WorkOrderDiagnosedEvent.of(workOrder));
 
         return workOrder.getId();
     }
+
 
     private void validateDiagnosisPreconditions(WorkOrder workOrder) {
         if (workOrder.getLaborItems().isEmpty()) {
@@ -61,4 +68,3 @@ public class DiagnoseWorkOrderUseCase implements UseCase<DiagnoseWorkOrderComman
         }
     }
 }
-

@@ -19,7 +19,7 @@ INSERT INTO clients (id, name, email, document, phone, date_created, date_update
 ('d9426f21-70ab-48d6-847e-4054a3a6b2b7', 'Transportes Silva', 'silva@transportes.com', '10888602065', '48999999002', now(), now(), null),
 ('4f74d0a8-b649-43c1-a20c-843de26f74a0', 'Táxi Aeroporto', 'taxiaero@mail.com', '93700260024', '48999999003', now(), now(), null),
 ('6b9cc8de-31a2-4759-9f4a-25091c5c56d1', 'Uber Drivers', 'uber@drivers.com', '46317355000100', '48999999004', now(), now(), null),
-('8b3f81e5-e118-4e31-8979-994cba5256e4', 'Deliveries Express', 'express@deliver.com', '46317355000100', '48999999005', now(), now(), null)
+('8b3f81e5-e118-4e31-8979-994cba5256e4', 'Deliveries Express', 'express@deliver.com', '11222333000181', '48999999005', now(), now(), null)
 ON CONFLICT DO NOTHING;
 
 -- =========================================
@@ -145,7 +145,7 @@ INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, dat
 ON CONFLICT DO NOTHING;
 
 -- =========================================
--- Criando work order 4: Revisão completa (orçamento enviado / aguardando decisão)
+-- Criando work order 4: Revisão completa (autorizada, aguardando execução)
 -- =========================================
 INSERT INTO work_orders (id, client_id, vehicle_id, description, status, date_created, date_updated)
 VALUES

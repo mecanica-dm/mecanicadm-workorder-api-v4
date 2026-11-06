@@ -1,5 +1,6 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.api;
 
+import com.mecanicadm.workorder_api.core.workorder.usecase.CancelWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.DeliverWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.DiagnoseWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.FinishWorkOrderExecutionUseCase;
@@ -42,6 +43,9 @@ class WorkOrderWorkflowControllerIT extends AbstractIntegrationTest {
 
     @MockitoBean
     private DeliverWorkOrderUseCase deliverWorkOrderUseCase;
+
+    @MockitoBean
+    private CancelWorkOrderUseCase cancelWorkOrderUseCase;
 
     @BeforeEach
     void setUp() {
@@ -126,5 +130,21 @@ class WorkOrderWorkflowControllerIT extends AbstractIntegrationTest {
                 .statusCode(HttpStatus.NO_CONTENT.value());
 
         verify(deliverWorkOrderUseCase, times(1)).execute(any());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Deve cancelar work order e retornar 204 No Content")
+    void shouldCancelAndReturn204() {
+        UUID workOrderId = UUID.randomUUID();
+
+        RestAssuredMockMvc.given()
+                .postProcessors(csrf())
+                .when()
+                .post("/work-orders/{id}/step/cancel", workOrderId)
+                .then()
+                .statusCode(HttpStatus.NO_CONTENT.value());
+
+        verify(cancelWorkOrderUseCase, times(1)).execute(any());
     }
 }

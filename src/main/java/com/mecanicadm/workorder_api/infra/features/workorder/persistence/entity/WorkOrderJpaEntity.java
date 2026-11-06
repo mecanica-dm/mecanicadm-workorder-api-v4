@@ -37,10 +37,14 @@ public class WorkOrderJpaEntity extends AuditEntity {
     @Column(name = "execution_end_at")
     private LocalDateTime executionEndAt;
 
+    @Column(name = "requested_changes", columnDefinition = "TEXT")
+    private String requestedChanges;
+
     protected WorkOrderJpaEntity() {
     }
 
-    public WorkOrderJpaEntity(UUID id, UUID clientId, String vehicleId, String description, WorkOrderStatus status, LocalDateTime executionStartAt, LocalDateTime executionEndAt) {
+    @SuppressWarnings("java:S107")
+    public WorkOrderJpaEntity(UUID id, UUID clientId, String vehicleId, String description, WorkOrderStatus status, LocalDateTime executionStartAt, LocalDateTime executionEndAt, String requestedChanges) {
         this.id = id;
         this.clientId = clientId;
         this.vehicleId = vehicleId;
@@ -48,6 +52,7 @@ public class WorkOrderJpaEntity extends AuditEntity {
         this.status = status;
         this.executionStartAt = executionStartAt;
         this.executionEndAt = executionEndAt;
+        this.requestedChanges = requestedChanges;
     }
 
     public UUID getId() {
@@ -76,5 +81,9 @@ public class WorkOrderJpaEntity extends AuditEntity {
 
     public Optional<LocalDateTime> getExecutionEndAt() {
         return Optional.ofNullable(executionEndAt);
+    }
+
+    public String getRequestedChanges() {
+        return requestedChanges;
     }
 }

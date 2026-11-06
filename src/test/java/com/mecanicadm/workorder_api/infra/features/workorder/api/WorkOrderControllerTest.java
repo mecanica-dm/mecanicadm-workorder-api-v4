@@ -41,8 +41,6 @@ class WorkOrderControllerTest {
     @Mock
     private GetAllWorkOrderUseCase getAllWorkOrderUseCase;
     @Mock
-    private SoftDeleteWorkOrderUseCase softDeleteWorkOrderUseCase;
-    @Mock
     private GetWorkOrderStatusUseCase getWorkOrderStatusUseCase;
 
     private WorkOrderController controller;
@@ -52,7 +50,7 @@ class WorkOrderControllerTest {
         controller = new WorkOrderController(
                 createWorkOrderUseCase, updateWorkOrderUseCase,
                 getWorkOrderByIdUseCase, getAllWorkOrderUseCase,
-                softDeleteWorkOrderUseCase, getWorkOrderStatusUseCase
+                getWorkOrderStatusUseCase
         );
     }
 
@@ -97,7 +95,7 @@ class WorkOrderControllerTest {
         WorkOrder workOrder = WorkOrder.restore(
                 workOrderId, clientId, "ABC-1234", "Troca de oleo",
                 WorkOrderStatus.RECEIVED, null, null,
-                new HashSet<>(), new HashSet<>(), null,
+                new HashSet<>(), new HashSet<>(),
                 LocalDateTime.now(), LocalDateTime.now(), null
         );
         when(getWorkOrderByIdUseCase.execute(any())).thenReturn(workOrder);
@@ -134,7 +132,7 @@ class WorkOrderControllerTest {
         WorkOrder workOrder = WorkOrder.restore(
                 workOrderId, clientId, "ABC-1234", "Troca de oleo",
                 WorkOrderStatus.RECEIVED, null, null,
-                new HashSet<>(), new HashSet<>(), null,
+                new HashSet<>(), new HashSet<>(),
                 LocalDateTime.now(), LocalDateTime.now(), null
         );
         var pageResult = new WorkOrderPageResult(List.of(workOrder), 1L);
@@ -164,16 +162,5 @@ class WorkOrderControllerTest {
         assertNotNull(response.getBody());
         assertEquals(0, response.getBody().getContent().size());
         verify(getAllWorkOrderUseCase).execute(any());
-    }
-
-    @Test
-    @DisplayName("Deve deletar work order e retornar 204 No Content")
-    void shouldDeleteWorkOrderAndReturn204() {
-        UUID workOrderId = UUID.randomUUID();
-
-        var response = controller.delete(workOrderId);
-
-        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
-        verify(softDeleteWorkOrderUseCase).execute(any());
     }
 }

@@ -3,6 +3,7 @@ package com.mecanicadm.workorder_api.infra.features.workorder.config;
 import com.mecanicadm.workorder_api.core.client.domain.port.ClientGateway;
 import com.mecanicadm.workorder_api.core.labor.domain.port.LaborGateway;
 import com.mecanicadm.workorder_api.core.material.domain.port.MaterialGateway;
+import com.mecanicadm.workorder_api.core.shared.messaging.MessagePublisher;
 import com.mecanicadm.workorder_api.core.stockmovements.domain.port.StockMovementsGateway;
 import com.mecanicadm.workorder_api.core.stockmovements.usecase.DeductStockUseCase;
 import com.mecanicadm.workorder_api.core.stockmovements.usecase.SoftDeleteStockUseCase;
@@ -11,8 +12,10 @@ import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderGateway;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderLaborItemGateway;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderMaterialItemGateway;
 import com.mecanicadm.workorder_api.core.workorder.usecase.*;
+import com.mecanicadm.workorder_api.infra.config.TransactionalProxy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class WorkOrderConfiguration {
@@ -20,13 +23,16 @@ public class WorkOrderConfiguration {
     @Bean
     public CreateWorkOrderUseCase createWorkOrderUseCase(WorkOrderGateway gateway,
                                                           AddLaborToWorkOrderUseCase addLaborToWorkOrderUseCase,
-                                                          AddMaterialToWorkOrderUseCase addMaterialToWorkOrderUseCase) {
-        return new CreateWorkOrderUseCase(gateway, addLaborToWorkOrderUseCase, addMaterialToWorkOrderUseCase);
+                                                          AddMaterialToWorkOrderUseCase addMaterialToWorkOrderUseCase,
+                                                          MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new CreateWorkOrderUseCase(gateway, addLaborToWorkOrderUseCase, addMaterialToWorkOrderUseCase, publisher), transactionManager);
     }
 
     @Bean
-    public UpdateWorkOrderUseCase updateWorkOrderUseCase(WorkOrderGateway gateway) {
-        return new UpdateWorkOrderUseCase(gateway);
+    public UpdateWorkOrderUseCase updateWorkOrderUseCase(WorkOrderGateway gateway, MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new UpdateWorkOrderUseCase(gateway, publisher), transactionManager);
     }
 
     @Bean
@@ -45,17 +51,12 @@ public class WorkOrderConfiguration {
     }
 
     @Bean
-    public SoftDeleteWorkOrderUseCase softDeleteWorkOrderUseCase(WorkOrderGateway gateway,
-                                                                  WorkOrderMaterialItemGateway materialItemGateway,
-                                                                  StockMovementsGateway stockMovementsGateway) {
-        return new SoftDeleteWorkOrderUseCase(gateway, materialItemGateway, stockMovementsGateway);
-    }
-
-    @Bean
     public DiagnoseWorkOrderUseCase diagnoseWorkOrderUseCase(WorkOrderGateway gateway,
                                                              ClientGateway clientGateway,
-                                                             VehicleGateway vehicleGateway) {
-        return new DiagnoseWorkOrderUseCase(gateway, clientGateway, vehicleGateway);
+                                                             VehicleGateway vehicleGateway,
+                                                             MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new DiagnoseWorkOrderUseCase(gateway, clientGateway, vehicleGateway, publisher), transactionManager);
     }
 
     @Bean
@@ -72,20 +73,25 @@ public class WorkOrderConfiguration {
     @Bean
     public AddLaborToWorkOrderUseCase addLaborToWorkOrderUseCase(WorkOrderGateway gateway,
                                                                   WorkOrderLaborItemGateway laborItemGateway,
-                                                                  CreateWorkOrderLaborItemUseCase createWorkOrderLaborItemUseCase) {
-        return new AddLaborToWorkOrderUseCase(gateway, laborItemGateway, createWorkOrderLaborItemUseCase);
+                                                                  CreateWorkOrderLaborItemUseCase createWorkOrderLaborItemUseCase,
+                                                                  MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new AddLaborToWorkOrderUseCase(gateway, laborItemGateway, createWorkOrderLaborItemUseCase, publisher), transactionManager);
     }
 
     @Bean
     public AddMaterialToWorkOrderUseCase addMaterialToWorkOrderUseCase(WorkOrderGateway gateway,
                                                                         WorkOrderMaterialItemGateway materialItemGateway,
-                                                                        CreateWorkOrderMaterialItemUseCase createWorkOrderMaterialItemUseCase) {
-        return new AddMaterialToWorkOrderUseCase(gateway, materialItemGateway, createWorkOrderMaterialItemUseCase);
+                                                                        CreateWorkOrderMaterialItemUseCase createWorkOrderMaterialItemUseCase,
+                                                                        MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new AddMaterialToWorkOrderUseCase(gateway, materialItemGateway, createWorkOrderMaterialItemUseCase, publisher), transactionManager);
     }
 
     @Bean
-    public DeliverWorkOrderUseCase deliverWorkOrderUseCase(WorkOrderGateway gateway) {
-        return new DeliverWorkOrderUseCase(gateway);
+    public DeliverWorkOrderUseCase deliverWorkOrderUseCase(WorkOrderGateway gateway, MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new DeliverWorkOrderUseCase(gateway, publisher), transactionManager);
     }
 
     @Bean
@@ -95,8 +101,9 @@ public class WorkOrderConfiguration {
     }
 
     @Bean
-    public FinishWorkOrderExecutionUseCase finishWorkOrderExecutionUseCase(WorkOrderGateway gateway) {
-        return new FinishWorkOrderExecutionUseCase(gateway);
+    public FinishWorkOrderExecutionUseCase finishWorkOrderExecutionUseCase(WorkOrderGateway gateway, MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new FinishWorkOrderExecutionUseCase(gateway, publisher), transactionManager);
     }
 
     @Bean
@@ -110,15 +117,20 @@ public class WorkOrderConfiguration {
     }
 
     @Bean
-    public RemoveLaborItemFromWorkOrderUseCase removeLaborItemFromWorkOrderUseCase(WorkOrderLaborItemGateway gateway) {
-        return new RemoveLaborItemFromWorkOrderUseCase(gateway);
+    public RemoveLaborItemFromWorkOrderUseCase removeLaborItemFromWorkOrderUseCase(WorkOrderLaborItemGateway gateway,
+                                                                                    WorkOrderGateway workOrderGateway,
+                                                                                    MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new RemoveLaborItemFromWorkOrderUseCase(gateway, workOrderGateway, publisher), transactionManager);
     }
 
     @Bean
     public RemoveMaterialItemFromWorkOrderUseCase removeMaterialItemFromWorkOrderUseCase(WorkOrderGateway workOrderGateway,
                                                                                           WorkOrderMaterialItemGateway materialItemGateway,
-                                                                                          SoftDeleteStockUseCase softDeleteStockUseCase) {
-        return new RemoveMaterialItemFromWorkOrderUseCase(workOrderGateway, materialItemGateway, softDeleteStockUseCase);
+                                                                                          SoftDeleteStockUseCase softDeleteStockUseCase,
+                                                                                          MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new RemoveMaterialItemFromWorkOrderUseCase(workOrderGateway, materialItemGateway, softDeleteStockUseCase, publisher), transactionManager);
     }
 
     @Bean
@@ -128,7 +140,33 @@ public class WorkOrderConfiguration {
     }
 
     @Bean
-    public StartWorkOrderExecutionUseCase startWorkOrderExecutionUseCase(WorkOrderGateway gateway) {
-        return new StartWorkOrderExecutionUseCase(gateway);
+    public StartWorkOrderExecutionUseCase startWorkOrderExecutionUseCase(WorkOrderGateway gateway, MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new StartWorkOrderExecutionUseCase(gateway, publisher), transactionManager);
     }
+
+    @Bean
+    public CancelWorkOrderUseCase cancelWorkOrderUseCase(WorkOrderGateway gateway, StockMovementsGateway stockMovementsGateway,
+                                                          MessagePublisher publisher, PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new CancelWorkOrderUseCase(gateway, stockMovementsGateway, publisher), transactionManager);
+    }
+
+    @Bean
+    public ReleaseWorkOrderVehicleUseCase releaseWorkOrderVehicleUseCase(WorkOrderGateway gateway, MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new ReleaseWorkOrderVehicleUseCase(gateway, publisher), transactionManager);
+    }
+
+    @Bean
+    public RequestWorkOrderChangesUseCase requestWorkOrderChangesUseCase(WorkOrderGateway gateway, MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new RequestWorkOrderChangesUseCase(gateway, publisher), transactionManager);
+    }
+
+    @Bean
+    public AuthorizeWorkOrderUseCase authorizeWorkOrderUseCase(WorkOrderGateway gateway, MessagePublisher publisher,
+                                                          PlatformTransactionManager transactionManager) {
+        return TransactionalProxy.of(new AuthorizeWorkOrderUseCase(gateway, publisher), transactionManager);
+    }
+
 }

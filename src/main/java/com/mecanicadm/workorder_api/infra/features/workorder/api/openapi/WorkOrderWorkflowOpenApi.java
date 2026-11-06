@@ -34,5 +34,10 @@ public interface WorkOrderWorkflowOpenApi {
     @ApiResponse(responseCode = "400", description = "Status invalido para retirada", content = @Content)
     @ApiResponse(responseCode = "404", description = "Ordem de servico nao encontrada", content = @Content)
     ResponseEntity<Void> deliver(UUID id);
-}
 
+    @Operation(summary = "Cancelar ordem de serviço", description = "Cancela a ordem de serviço e libera o estoque reservado dos materiais. Só é possível antes de a execução começar; cancelar uma OS já cancelada não tem efeito")
+    @ApiResponse(responseCode = "204", description = "Ordem de serviço cancelada com sucesso")
+    @ApiResponse(responseCode = "400", description = "Status invalido para cancelamento", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Ordem de servico nao encontrada", content = @Content)
+    ResponseEntity<Void> cancel(UUID id);
+}

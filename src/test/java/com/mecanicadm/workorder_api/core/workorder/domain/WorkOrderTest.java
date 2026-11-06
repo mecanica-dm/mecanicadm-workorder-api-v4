@@ -26,7 +26,6 @@ class WorkOrderTest {
         assertEquals("VEH-001", workOrder.getVehicleId());
         assertEquals("Troca de oleo", workOrder.getDescription());
         assertEquals(WorkOrderStatus.RECEIVED, workOrder.getStatus());
-        assertTrue(workOrder.getBudget().isEmpty());
         assertTrue(workOrder.getExecutionStartAt().isEmpty());
         assertTrue(workOrder.getExecutionEndAt().isEmpty());
         assertTrue(workOrder.getLaborItems().isEmpty());
@@ -99,6 +98,7 @@ class WorkOrderTest {
     @DisplayName("Deve marcar como aguardando execucao")
     void shouldMarkAsAwaitingExecution() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Servico");
+        workOrder.markAsDiagnosed();
         workOrder.markAsAwaitingExecution();
         assertEquals(WorkOrderStatus.AWAITING_EXECUTION, workOrder.getStatus());
     }
@@ -107,6 +107,7 @@ class WorkOrderTest {
     @DisplayName("Deve marcar como em execucao a partir de aguardando execucao")
     void shouldMarkAsInExecution() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Servico");
+        workOrder.markAsDiagnosed();
         workOrder.markAsAwaitingExecution();
 
         workOrder.markAsInExecution();
@@ -133,6 +134,7 @@ class WorkOrderTest {
     @DisplayName("Deve marcar como execucao completada")
     void shouldMarkAsExecutionCompleted() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Servico");
+        workOrder.markAsDiagnosed();
         workOrder.markAsAwaitingExecution();
         workOrder.markAsInExecution();
 
@@ -146,6 +148,7 @@ class WorkOrderTest {
     @DisplayName("Deve lancar excecao ao marcar como completada sem estar em execucao")
     void shouldThrowExceptionWhenMarkingAsCompletedWithInvalidStatus() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Servico");
+        workOrder.markAsDiagnosed();
         workOrder.markAsAwaitingExecution();
 
         DomainExceptionCore exception = assertThrows(DomainExceptionCore.class, workOrder::markAsExecutionCompleted);
@@ -165,7 +168,7 @@ class WorkOrderTest {
         WorkOrderLaborItem laborItem = WorkOrderLaborItem.create(UUID.randomUUID(), id);
         WorkOrder workOrder = WorkOrder.restore(id, clientId, "VEH-001", "Servico",
                 WorkOrderStatus.IN_EXECUTION, LocalDateTime.now(), null,
-                Set.of(laborItem), new HashSet<>(), null, null, null, null);
+                Set.of(laborItem), new HashSet<>(), null, null, null);
 
         DomainExceptionCore exception = assertThrows(DomainExceptionCore.class, workOrder::markAsExecutionCompleted);
 
@@ -180,6 +183,7 @@ class WorkOrderTest {
     @DisplayName("Deve marcar como paga")
     void shouldMarkAsPaid() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Servico");
+        workOrder.markAsDiagnosed();
         workOrder.markAsAwaitingExecution();
         workOrder.markAsInExecution();
         workOrder.markAsExecutionCompleted();
@@ -193,6 +197,7 @@ class WorkOrderTest {
     @DisplayName("Deve marcar como entregue")
     void shouldMarkAsDelivered() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Servico");
+        workOrder.markAsDiagnosed();
         workOrder.markAsAwaitingExecution();
         workOrder.markAsInExecution();
         workOrder.markAsExecutionCompleted();
@@ -235,7 +240,7 @@ class WorkOrderTest {
     @DisplayName("Deve marcar como revisao solicitada")
     void shouldMarkAsChangesRequested() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Servico");
-        workOrder.markAsChangesRequested();
+        workOrder.markAsChangesRequested("ajustar");
         assertEquals(WorkOrderStatus.CHANGES_REQUESTED, workOrder.getStatus());
     }
 
@@ -310,9 +315,9 @@ class WorkOrderTest {
         );
 
         assertAll(
-                () -> assertEquals(WorkOrderExceptions.InvalidStatus.class, exception.getClass()),
-                () -> assertEquals("work.order.status.invalid", exception.getMessageKey()),
-                () -> assertEquals(400, exception.getStatus())
+                () -> assertEquals(WorkOrderExceptions.NotEditable.class, exception.getClass()),
+                () -> assertEquals("work.order.status.not.editable", exception.getMessageKey()),
+                () -> assertEquals(409, exception.getStatus())
         );
     }
 }

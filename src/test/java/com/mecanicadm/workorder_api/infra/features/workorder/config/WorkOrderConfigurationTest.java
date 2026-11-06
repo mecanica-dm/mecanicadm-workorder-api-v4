@@ -7,14 +7,14 @@ import com.mecanicadm.workorder_api.core.stockmovements.domain.port.StockMovemen
 import com.mecanicadm.workorder_api.core.stockmovements.usecase.DeductStockUseCase;
 import com.mecanicadm.workorder_api.core.stockmovements.usecase.SoftDeleteStockUseCase;
 import com.mecanicadm.workorder_api.core.vehicle.domain.port.VehicleGateway;
-import com.mecanicadm.workorder_api.core.workorder.domain.port.BudgetDecisionTokenGateway;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderGateway;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderLaborItemGateway;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderMaterialItemGateway;
-import com.mecanicadm.workorder_api.core.workorder.usecase.*;
+import com.mecanicadm.workorder_api.core.workorder.usecase.AddLaborToWorkOrderUseCase;
+import com.mecanicadm.workorder_api.core.workorder.usecase.AddMaterialToWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.shared.domain.port.EmailService;
-import com.mecanicadm.workorder_api.infra.pdf.PdfGenerator;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,19 +45,15 @@ class WorkOrderConfigurationTest {
     @Mock
     private SoftDeleteStockUseCase softDeleteStockUseCase;
     @Mock
-    private StockMovementsGateway stockMovementsGateway;
+    private EmailService emailService;
     @Mock
-    private PdfGenerator pdfGenerator;
+    private StockMovementsGateway stockMovementsGateway;
     @Mock
     private AddLaborToWorkOrderUseCase addLaborToWorkOrderUseCase;
     @Mock
     private AddMaterialToWorkOrderUseCase addMaterialToWorkOrderUseCase;
     @Mock
-    private BudgetDecisionTokenGateway budgetDecisionTokenGateway;
-    @Mock
-    private EmailService emailService;
-    @Mock
-    private DecideWorkOrderBudgetUseCase decideWorkOrderBudgetUseCase;
+    private PlatformTransactionManager transactionManager;
 
     private WorkOrderConfiguration configuration;
 
@@ -68,20 +64,38 @@ class WorkOrderConfigurationTest {
 
     @Test
     @DisplayName("Deve criar bean CreateWorkOrderUseCase")
-    void shouldCreateCreateWorkOrderUseCase() {
-        assertNotNull(configuration.createWorkOrderUseCase(workOrderGateway, addLaborToWorkOrderUseCase, addMaterialToWorkOrderUseCase));
+    void shouldCreateWorkOrderUseCase() {
+        assertNotNull(configuration.createWorkOrderUseCase(workOrderGateway, addLaborToWorkOrderUseCase, addMaterialToWorkOrderUseCase, null, transactionManager));
     }
 
     @Test
     @DisplayName("Deve criar bean UpdateWorkOrderUseCase")
     void shouldCreateUpdateWorkOrderUseCase() {
-        assertNotNull(configuration.updateWorkOrderUseCase(workOrderGateway));
+        assertNotNull(configuration.updateWorkOrderUseCase(workOrderGateway, null, transactionManager));
     }
 
     @Test
-    @DisplayName("Deve criar bean GetWorkOrderByIdUseCase")
-    void shouldCreateGetWorkOrderByIdUseCase() {
-        assertNotNull(configuration.getWorkOrderByIdUseCase(workOrderGateway));
+    @DisplayName("Deve criar bean RequestWorkOrderChangesUseCase")
+    void shouldCreateRequestWorkOrderChangesUseCase() {
+        assertNotNull(configuration.requestWorkOrderChangesUseCase(workOrderGateway, null, transactionManager));
+    }
+
+    @Test
+    @DisplayName("Deve criar bean ReleaseWorkOrderVehicleUseCase")
+    void shouldCreateReleaseWorkOrderVehicleUseCase() {
+        assertNotNull(configuration.releaseWorkOrderVehicleUseCase(workOrderGateway, null, transactionManager));
+    }
+
+    @Test
+    @DisplayName("Deve criar bean CancelWorkOrderUseCase")
+    void shouldCreateCancelWorkOrderUseCase() {
+        assertNotNull(configuration.cancelWorkOrderUseCase(workOrderGateway, stockMovementsGateway, null, transactionManager));
+    }
+
+    @Test
+    @DisplayName("Deve criar bean AuthorizeWorkOrderUseCase")
+    void shouldCreateAuthorizeWorkOrderUseCase() {
+        assertNotNull(configuration.authorizeWorkOrderUseCase(workOrderGateway, null, transactionManager));
     }
 
     @Test
@@ -97,27 +111,9 @@ class WorkOrderConfigurationTest {
     }
 
     @Test
-    @DisplayName("Deve criar bean SoftDeleteWorkOrderUseCase")
-    void shouldCreateSoftDeleteWorkOrderUseCase() {
-        assertNotNull(configuration.softDeleteWorkOrderUseCase(workOrderGateway, workOrderMaterialItemGateway, stockMovementsGateway));
-    }
-
-    @Test
-    @DisplayName("Deve criar bean CalculateWorkOrderBudgetUseCase")
-    void shouldCreateCalculateWorkOrderBudgetUseCase() {
-        assertNotNull(configuration.calculateWorkOrderBudgetUseCase(workOrderGateway));
-    }
-
-    @Test
     @DisplayName("Deve criar bean DiagnoseWorkOrderUseCase")
     void shouldCreateDiagnoseWorkOrderUseCase() {
-        assertNotNull(configuration.diagnoseWorkOrderUseCase(workOrderGateway, clientGateway, vehicleGateway, null));
-    }
-
-    @Test
-    @DisplayName("Deve criar bean DecideWorkOrderBudgetUseCase")
-    void shouldCreateDecideWorkOrderBudgetUseCase() {
-        assertNotNull(configuration.decideWorkOrderBudgetUseCase(workOrderGateway));
+        assertNotNull(configuration.diagnoseWorkOrderUseCase(workOrderGateway, clientGateway, vehicleGateway, null, transactionManager));
     }
 
     @Test
@@ -135,19 +131,19 @@ class WorkOrderConfigurationTest {
     @Test
     @DisplayName("Deve criar bean AddLaborToWorkOrderUseCase")
     void shouldCreateAddLaborToWorkOrderUseCase() {
-        assertNotNull(configuration.addLaborToWorkOrderUseCase(workOrderGateway, workOrderLaborItemGateway, null));
+        assertNotNull(configuration.addLaborToWorkOrderUseCase(workOrderGateway, workOrderLaborItemGateway, null, null, transactionManager));
     }
 
     @Test
     @DisplayName("Deve criar bean AddMaterialToWorkOrderUseCase")
     void shouldCreateAddMaterialToWorkOrderUseCase() {
-        assertNotNull(configuration.addMaterialToWorkOrderUseCase(workOrderGateway, workOrderMaterialItemGateway, null));
+        assertNotNull(configuration.addMaterialToWorkOrderUseCase(workOrderGateway, workOrderMaterialItemGateway, null, null, transactionManager));
     }
 
     @Test
     @DisplayName("Deve criar bean DeliverWorkOrderUseCase")
     void shouldCreateDeliverWorkOrderUseCase() {
-        assertNotNull(configuration.deliverWorkOrderUseCase(workOrderGateway));
+        assertNotNull(configuration.deliverWorkOrderUseCase(workOrderGateway, null, transactionManager));
     }
 
     @Test
@@ -159,7 +155,7 @@ class WorkOrderConfigurationTest {
     @Test
     @DisplayName("Deve criar bean FinishWorkOrderExecutionUseCase")
     void shouldCreateFinishWorkOrderExecutionUseCase() {
-        assertNotNull(configuration.finishWorkOrderExecutionUseCase(workOrderGateway));
+        assertNotNull(configuration.finishWorkOrderExecutionUseCase(workOrderGateway, null, transactionManager));
     }
 
     @Test
@@ -169,51 +165,21 @@ class WorkOrderConfigurationTest {
     }
 
     @Test
-    @DisplayName("Deve criar bean GetPrintableBudgetUseCase")
-    void shouldCreateGetPrintableBudgetUseCase() {
-        assertNotNull(configuration.getPrintableBudgetUseCase(workOrderGateway, clientGateway, vehicleGateway, laborGateway, materialGateway, pdfGenerator));
-    }
-
-    @Test
     @DisplayName("Deve criar bean GetWorkOrderLaborItemByIdUseCase")
     void shouldCreateGetWorkOrderLaborItemByIdUseCase() {
         assertNotNull(configuration.getWorkOrderLaborItemByIdUseCase(workOrderGateway));
     }
 
     @Test
-    @DisplayName("Deve criar bean ManuallyAdjustWorkOrderBudgetUseCase")
-    void shouldCreateManuallyAdjustWorkOrderBudgetUseCase() {
-        assertNotNull(configuration.manuallyAdjustWorkOrderBudgetUseCase(workOrderGateway));
-    }
-
-    @Test
-    @DisplayName("Deve criar bean RecordWorkOrderPaymentUseCase")
-    void shouldCreateRecordWorkOrderPaymentUseCase() {
-        assertNotNull(configuration.recordWorkOrderPaymentUseCase(workOrderGateway));
-    }
-
-    @Test
     @DisplayName("Deve criar bean RemoveLaborItemFromWorkOrderUseCase")
     void shouldCreateRemoveLaborItemFromWorkOrderUseCase() {
-        assertNotNull(configuration.removeLaborItemFromWorkOrderUseCase(workOrderLaborItemGateway));
+        assertNotNull(configuration.removeLaborItemFromWorkOrderUseCase(workOrderLaborItemGateway, workOrderGateway, null, transactionManager));
     }
 
     @Test
     @DisplayName("Deve criar bean RemoveMaterialItemFromWorkOrderUseCase")
     void shouldCreateRemoveMaterialItemFromWorkOrderUseCase() {
-        assertNotNull(configuration.removeMaterialItemFromWorkOrderUseCase(workOrderGateway, workOrderMaterialItemGateway, softDeleteStockUseCase));
-    }
-
-    @Test
-    @DisplayName("Deve criar bean SendWorkOrderBudgetUseCase")
-    void shouldCreateSendWorkOrderBudgetUseCase() {
-        assertNotNull(configuration.sendWorkOrderBudgetUseCase(workOrderGateway, budgetDecisionTokenGateway, clientGateway, emailService, configuration.getPrintableBudgetUseCase(workOrderGateway, clientGateway, vehicleGateway, laborGateway, materialGateway, pdfGenerator), "/budget-decision/"));
-    }
-
-    @Test
-    @DisplayName("Deve criar bean ProcessBudgetDecisionByTokenUseCase")
-    void shouldCreateProcessBudgetDecisionByTokenUseCase() {
-        assertNotNull(configuration.processBudgetDecisionByTokenUseCase(budgetDecisionTokenGateway, decideWorkOrderBudgetUseCase));
+        assertNotNull(configuration.removeMaterialItemFromWorkOrderUseCase(workOrderGateway, workOrderMaterialItemGateway, softDeleteStockUseCase, null, transactionManager));
     }
 
     @Test
@@ -225,6 +191,6 @@ class WorkOrderConfigurationTest {
     @Test
     @DisplayName("Deve criar bean StartWorkOrderExecutionUseCase")
     void shouldCreateStartWorkOrderExecutionUseCase() {
-        assertNotNull(configuration.startWorkOrderExecutionUseCase(workOrderGateway));
+        assertNotNull(configuration.startWorkOrderExecutionUseCase(workOrderGateway, null, transactionManager));
     }
 }

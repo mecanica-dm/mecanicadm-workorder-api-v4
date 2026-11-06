@@ -8,10 +8,11 @@ import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrderLaborItem;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderGateway;
 import com.mecanicadm.workorder_api.core.workorder.exception.WorkOrderExceptions;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.DiagnoseWorkOrderCommand;
+import com.mecanicadm.workorder_api.core.shared.messaging.MessagePublisher;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -36,10 +37,14 @@ class DiagnoseWorkOrderUseCaseTest {
     private VehicleGateway vehicleGateway;
 
     @Mock
-    private CalculateWorkOrderBudgetUseCase calculateWorkOrderBudgetUseCase;
+    private MessagePublisher eventPublisher;
 
-    @InjectMocks
     private DiagnoseWorkOrderUseCase useCase;
+
+    @BeforeEach
+    void setUp() {
+        useCase = new DiagnoseWorkOrderUseCase(gateway, clientGateway, vehicleGateway, eventPublisher);
+    }
 
     @Test
     @DisplayName("Deve diagnosticar ordem de serviço com sucesso")
@@ -51,7 +56,9 @@ class DiagnoseWorkOrderUseCaseTest {
         when(workOrder.getId()).thenReturn(workOrderId);
         when(workOrder.getClientId()).thenReturn(clientId);
         when(workOrder.getVehicleId()).thenReturn(vehicleId);
-        when(workOrder.getLaborItems()).thenReturn(Set.of(mock(WorkOrderLaborItem.class)));
+        UUID laborId = UUID.randomUUID();
+        WorkOrderLaborItem laborItem = WorkOrderLaborItem.create(laborId, workOrderId);
+        when(workOrder.getLaborItems()).thenReturn(Set.of(laborItem));
 
         when(gateway.findById(workOrderId)).thenReturn(Optional.of(workOrder));
         when(clientGateway.existsById(clientId)).thenReturn(true);
@@ -61,7 +68,6 @@ class DiagnoseWorkOrderUseCaseTest {
 
         assertEquals(workOrderId, resultId);
         verify(workOrder).markAsDiagnosed();
-        verify(calculateWorkOrderBudgetUseCase).execute(any());
     }
 
     @Test

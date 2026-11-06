@@ -4,10 +4,11 @@ import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderGateway;
 import com.mecanicadm.workorder_api.core.workorder.exception.WorkOrderExceptions;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.FinishWorkOrderExecutionCommand;
+import com.mecanicadm.workorder_api.core.shared.messaging.MessagePublisher;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -23,8 +24,15 @@ class FinishWorkOrderExecutionUseCaseTest {
     @Mock
     private WorkOrderGateway gateway;
 
-    @InjectMocks
+    @Mock
+    private MessagePublisher eventPublisher;
+
     private FinishWorkOrderExecutionUseCase useCase;
+
+    @BeforeEach
+    void setUp() {
+        useCase = new FinishWorkOrderExecutionUseCase(gateway, eventPublisher);
+    }
 
     @Test
     @DisplayName("Deve finalizar a execução da ordem de serviço com sucesso")
