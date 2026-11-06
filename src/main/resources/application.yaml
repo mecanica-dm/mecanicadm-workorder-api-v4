@@ -1,0 +1,89 @@
+spring:
+  application:
+    name: mecanicadm-workorder-api
+  datasource:
+    url: "jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:workorder_db}"
+    username: "${DB_USER:admin}"
+    password: "${DB_PASSWORD:admin}"
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  messages:
+    encoding: UTF-8
+    basename: i18n/messages
+  flyway:
+    enabled: true
+    clean-disabled: true
+  mail:
+    host: "${MAIL_HOST:smtp.gmail.com}"
+    port: "${MAIL_PORT:587}"
+    username: "${MAIL_USERNAME:username}"
+    password: "${MAIL_PASSWORD:password}"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  # RabbitMQ
+  rabbitmq:
+    host: "${RABBITMQ_HOST:localhost}"
+    port: "${RABBITMQ_PORT:5672}"
+    username: "${RABBITMQ_USER:guest}"
+    password: "${RABBITMQ_PASSWORD:guest}"
+    virtual-host: "${RABBITMQ_VHOST:/}"
+    publisher-confirm-type: correlated
+
+server:
+  servlet:
+    context-path: /api
+  error:
+    include-stacktrace: never
+
+api:
+  security:
+    token:
+      secret: "${JWT_SECRET:development}"
+
+cors:
+  allowed-origins: "*"
+
+management:
+  endpoint:
+    health:
+      # Habilita os endpoints de Liveness e Readiness do Kubernetes
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      # Expõe os endpoints via Web
+      exposure:
+        include: health,info,prometheus
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    docExpansion: none
+    tagsSorter: alpha
+
+messaging:
+  queue:
+    workorder: workorder
+  exchange:
+    workorder-output: workorder-output
+  consumer:
+    prefetch: "${CONSUMER_PREFETCH:10}"
+  outbox:
+    scheduler:
+      enabled: "${OUTBOX_SCHEDULER_ENABLED:true}"
+    publisher:
+      interval-ms: "${OUTBOX_PUBLISHER_INTERVAL_MS:1000}"
+    batch-size: "${OUTBOX_BATCH_SIZE:50}"
+    confirm-timeout-ms: "${OUTBOX_CONFIRM_TIMEOUT_MS:5000}"
+    retention-days: "${OUTBOX_RETENTION_DAYS:7}"
+    cleanup:
+      cron: "${OUTBOX_CLEANUP_CRON:0 0 3 * * *}"
