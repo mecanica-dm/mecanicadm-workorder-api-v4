@@ -12,7 +12,6 @@ import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderLaborIte
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderMaterialItemGateway;
 import com.mecanicadm.workorder_api.core.workorder.usecase.AddLaborToWorkOrderUseCase;
 import com.mecanicadm.workorder_api.core.workorder.usecase.AddMaterialToWorkOrderUseCase;
-import com.mecanicadm.workorder_api.core.shared.domain.port.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.junit.jupiter.api.DisplayName;
@@ -44,8 +43,6 @@ class WorkOrderConfigurationTest {
     private DeductStockUseCase deductStockUseCase;
     @Mock
     private SoftDeleteStockUseCase softDeleteStockUseCase;
-    @Mock
-    private EmailService emailService;
     @Mock
     private StockMovementsGateway stockMovementsGateway;
     @Mock
