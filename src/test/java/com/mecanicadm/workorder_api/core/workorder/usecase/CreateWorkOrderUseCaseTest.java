@@ -57,7 +57,10 @@ class CreateWorkOrderUseCaseTest {
         when(gateway.findDetailsById(any())).thenAnswer(invocation -> {
             WorkOrder created = stored.get();
             return Optional.of(new com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderDetails(
-                    created.getId(), created.getClientId(), created.getVehicleId(), created.getDescription(),
+                    created.getId(),
+                    new com.mecanicadm.workorder_api.core.workorder.domain.events.ClientSnapshot(created.getClientId(), "Cliente", "cliente@test.com", "12345678900", "48999999999"),
+                    new com.mecanicadm.workorder_api.core.workorder.domain.events.VehicleSnapshot(created.getVehicleId(), "Modelo", "Marca", 2020),
+                    created.getDescription(),
                     created.getStatus(), null, null, List.of(), List.of()));
         });
     }
@@ -81,8 +84,8 @@ class CreateWorkOrderUseCaseTest {
         assertAll(
                 () -> assertNotNull(resultId),
                 () -> assertEquals(resultId, event.workOrderId()),
-                () -> assertEquals(clientId, event.clientId()),
-                () -> assertEquals("ABC-1234", event.vehicleId()),
+                () -> assertEquals(clientId, event.client().id()),
+                () -> assertEquals("ABC-1234", event.vehicle().licensePlate()),
                 () -> assertEquals("RECEIVED", event.status())
         );
         verify(gateway).create(any());

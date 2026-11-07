@@ -22,7 +22,9 @@ public interface WorkOrderJpaRepository extends JpaRepository<WorkOrderJpaEntity
     Optional<WorkOrderStatus> findStatusById(@Param("id") UUID id);
 
     @Query(value = "SELECT CAST(jsonb_build_object(" +
-            "'id', w.id, 'clientId', w.client_id, 'vehicleId', w.vehicle_id, 'description', w.description, " +
+            "'id', w.id, 'description', w.description, " +
+            "'client', jsonb_build_object('id', c.id, 'name', c.name, 'email', c.email, 'document', c.document, 'phone', c.phone), " +
+            "'vehicle', jsonb_build_object('licensePlate', v.license_plate, 'model', v.model, 'brand', v.brand, 'modelYear', v.model_year), " +
             "'status', w.status, 'executionStartAt', w.execution_start_at, 'executionEndAt', w.execution_end_at, " +
             "'laborItems', COALESCE((SELECT jsonb_agg(jsonb_build_object(" +
             "'id', i.id, 'laborId', i.labor_id, 'name', l.name, 'price', l.price, 'status', i.status, " +
@@ -34,7 +36,9 @@ public interface WorkOrderJpaRepository extends JpaRepository<WorkOrderJpaEntity
             "'type', m.type, 'unitPrice', m.price, 'quantity', i.quantity, 'totalPrice', m.price * i.quantity) ORDER BY i.id) " +
             "FROM work_order_material_items i JOIN materials m ON m.id = i.material_id " +
             "WHERE i.work_order_id = w.id), CAST('[]' AS jsonb))" +
-            ") AS VARCHAR) FROM work_orders w WHERE w.id = :id", nativeQuery = true)
+            ") AS VARCHAR) FROM work_orders w " +
+            "LEFT JOIN clients c ON c.id = w.client_id LEFT JOIN vehicle v ON v.license_plate = w.vehicle_id " +
+            "WHERE w.id = :id", nativeQuery = true)
     String findDetailsJsonById(@Param("id") UUID id);
 
     @Query(value = "SELECT COALESCE(SUM(m.price * wmi.quantity), 0) " +

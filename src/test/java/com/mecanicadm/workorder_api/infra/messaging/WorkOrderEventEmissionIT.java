@@ -123,6 +123,12 @@ class WorkOrderEventEmissionIT extends AbstractIntegrationTest {
         assertTrue(created.contains("\"Oleo 5W30\"") && created.contains("\"Brand X\"") && created.contains("100.00"),
                 "Created deve conter nome, marca e valor total do material (2 x 50.00)");
         assertTrue(created.contains("\"quantity\": 2"), "Created deve conter a quantidade do material");
+        assertTrue(created.contains("\"Cliente Saga\"") && created.contains("cliente.saga@test.com")
+                && created.contains("11122233344") && created.contains("48999999911"), "Created deve conter os dados do cliente");
+        assertTrue(created.contains("\"SAG-0001\"") && created.contains("\"Onix LT\"") && created.contains("\"Chevrolet\"")
+                && created.contains("2020"), "Created deve conter os dados do veiculo");
+        String updated = (String) events.get(1).get("payload");
+        assertTrue(updated.contains("\"Cliente Saga\"") && updated.contains("\"Onix LT\""), "Updated deve conter cliente e veiculo");
         String lastUpdated = (String) events.get(3).get("payload");
         assertTrue(lastUpdated.contains(LABOR_2.toString()), "Updated deve conter o retrato atual com a mao de obra adicionada");
     }

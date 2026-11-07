@@ -41,7 +41,7 @@ class RemoveMaterialItemFromWorkOrderUseCaseTest {
     @BeforeEach
     void setUp() {
         org.mockito.Mockito.lenient().when(workOrderGateway.findDetailsById(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
-                java.util.Optional.of(new com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderDetails(invocation.getArgument(0), UUID.randomUUID(), "ABC-1234", "descricao",
+                java.util.Optional.of(new com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderDetails(invocation.getArgument(0), null, null, "descricao",
                         com.mecanicadm.workorder_api.core.workorder.domain.enums.WorkOrderStatus.RECEIVED, null, null,
                         java.util.List.of(), java.util.List.of())));
         useCase = new RemoveMaterialItemFromWorkOrderUseCase(workOrderGateway, materialItemGateway, softDeleteStockUseCase, publisher);

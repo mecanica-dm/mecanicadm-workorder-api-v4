@@ -31,11 +31,13 @@ class WorkOrderEventContractTest {
     private final UUID laborId = UUID.randomUUID();
     private final UUID materialId = UUID.randomUUID();
 
-    private static final String[] ORDER_FIELDS = {"clientId", "vehicleId", "description", "status", "executionStartAt",
+    private static final String[] ORDER_FIELDS = {"client", "vehicle", "description", "status", "executionStartAt",
             "executionEndAt", "laborItems", "materialItems"};
 
     private WorkOrderDetails details(WorkOrder workOrder) {
-        return new WorkOrderDetails(workOrder.getId(), workOrder.getClientId(), workOrder.getVehicleId(),
+        return new WorkOrderDetails(workOrder.getId(),
+                new ClientSnapshot(workOrder.getClientId(), "Cliente Teste", "cliente@test.com", "12345678900", "48999999999"),
+                new VehicleSnapshot(workOrder.getVehicleId(), "Volvo FH", "Volvo", 2020),
                 workOrder.getDescription(), workOrder.getStatus(), null, null, laborItems(), materialItems());
     }
 
@@ -106,8 +108,21 @@ class WorkOrderEventContractTest {
 
         Set<String> names = new TreeSet<>();
         snapshot.fieldNames().forEachRemaining(names::add);
-        assertEquals(new TreeSet<>(Set.of("workOrderId", "clientId", "vehicleId", "description", "status", "executionStartAt", "executionEndAt", "laborItems",
+        assertEquals(new TreeSet<>(Set.of("workOrderId", "client", "vehicle", "description", "status", "executionStartAt", "executionEndAt", "laborItems",
                 "materialItems")), names);
+
+        JsonNode client = snapshot.get("client");
+        assertEquals("Cliente Teste", client.get("name").asText());
+        assertEquals("cliente@test.com", client.get("email").asText());
+        assertEquals("12345678900", client.get("document").asText());
+        assertEquals("48999999999", client.get("phone").asText());
+        assertTrue(client.has("id"));
+
+        JsonNode vehicle = snapshot.get("vehicle");
+        assertEquals("ABC-1234", vehicle.get("licensePlate").asText());
+        assertEquals("Volvo FH", vehicle.get("model").asText());
+        assertEquals("Volvo", vehicle.get("brand").asText());
+        assertEquals(2020, vehicle.get("modelYear").asInt());
 
         JsonNode labor = snapshot.get("laborItems").get(0);
         assertEquals(1, snapshot.get("laborItems").size());

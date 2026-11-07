@@ -8,8 +8,8 @@ import java.util.UUID;
 
 public record WorkOrderUpdatedEvent(
         UUID workOrderId,
-        UUID clientId,
-        String vehicleId,
+        ClientSnapshot client,
+        VehicleSnapshot vehicle,
         String description,
         String status,
         LocalDateTime executionStartAt,
@@ -20,8 +20,8 @@ public record WorkOrderUpdatedEvent(
     public static WorkOrderUpdatedEvent of(WorkOrderDetails details) {
         return new WorkOrderUpdatedEvent(
                 details.id(),
-                details.clientId(),
-                details.vehicleId(),
+                details.client(),
+                details.vehicle(),
                 details.description(),
                 details.status().name(),
                 details.executionStartAt(),
