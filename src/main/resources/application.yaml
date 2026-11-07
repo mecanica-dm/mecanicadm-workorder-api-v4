@@ -14,18 +14,6 @@ spring:
   flyway:
     enabled: true
     clean-disabled: true
-  mail:
-    host: "${MAIL_HOST:smtp.gmail.com}"
-    port: "${MAIL_PORT:587}"
-    username: "${MAIL_USERNAME:username}"
-    password: "${MAIL_PASSWORD:password}"
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-  # RabbitMQ
   rabbitmq:
     host: "${RABBITMQ_HOST:localhost}"
     port: "${RABBITMQ_PORT:5672}"
