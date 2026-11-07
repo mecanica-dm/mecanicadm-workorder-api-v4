@@ -73,7 +73,7 @@
       "routing_key": "",
       "arguments": {
         "x-match": "all",
-        "eventType": "CancelWorkOrderIntegrationCommand"
+        "event-type": "CancelWorkOrderIntegrationCommand"
       }
     },
     {
@@ -84,7 +84,7 @@
       "routing_key": "",
       "arguments": {
         "x-match": "all",
-        "eventType": "AuthorizeWorkOrderIntegrationCommand"
+        "event-type": "AuthorizeWorkOrderIntegrationCommand"
       }
     },
     {
@@ -95,7 +95,7 @@
       "routing_key": "",
       "arguments": {
         "x-match": "all",
-        "eventType": "ChangesRequestedWorkOrderIntegrationCommand"
+        "event-type": "ChangesRequestedWorkOrderIntegrationCommand"
       }
     },
     {
@@ -106,7 +106,7 @@
       "routing_key": "",
       "arguments": {
         "x-match": "all",
-        "eventType": "ReleaseWorkOrderVehicleIntegrationCommand"
+        "event-type": "ReleaseWorkOrderVehicleIntegrationCommand"
       }
     },
     {

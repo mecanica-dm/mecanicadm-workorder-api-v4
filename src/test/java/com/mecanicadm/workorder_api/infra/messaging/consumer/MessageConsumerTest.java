@@ -47,7 +47,7 @@ class MessageConsumerTest {
     private Message amqpMessage(UUID messageId) {
         MessageProperties properties = new MessageProperties();
         properties.setDeliveryTag(DELIVERY_TAG);
-        properties.setHeader("eventType", "CancelWorkOrderIntegrationCommand");
+        properties.setHeader("event-type", "CancelWorkOrderIntegrationCommand");
         if (messageId != null) {
             properties.setMessageId(messageId.toString());
         }
@@ -88,7 +88,7 @@ class MessageConsumerTest {
         UUID messageId = UUID.randomUUID();
         CancelWorkOrderIntegrationCommand command = command();
         Message message = amqpMessage(null);
-        message.getMessageProperties().setHeader("messageId", messageId.toString());
+        message.getMessageProperties().setHeader("message-id", messageId.toString());
 
         consumer.consume(command.workOrderId(), command, message, channel, received -> { });
 

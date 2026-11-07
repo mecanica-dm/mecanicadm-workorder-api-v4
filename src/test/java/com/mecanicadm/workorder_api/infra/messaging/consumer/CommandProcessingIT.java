@@ -219,7 +219,7 @@ class CommandProcessingIT extends AbstractIntegrationTest {
         MessageProperties properties = new MessageProperties();
         properties.setDeliveryTag(7L);
         properties.setMessageId(messageId.toString());
-        properties.setHeader("eventType", "CancelWorkOrderIntegrationCommand");
+        properties.setHeader("event-type", "CancelWorkOrderIntegrationCommand");
         return new Message(new byte[0], properties);
     }
 

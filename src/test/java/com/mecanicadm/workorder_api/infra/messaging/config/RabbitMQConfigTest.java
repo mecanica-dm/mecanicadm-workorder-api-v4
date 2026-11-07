@@ -23,7 +23,7 @@ class RabbitMQConfigTest {
         MessageProperties properties = new MessageProperties();
         properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
         if (eventType != null) {
-            properties.setHeader("eventType", eventType);
+            properties.setHeader("event-type", eventType);
         }
         return new Message(json.getBytes(StandardCharsets.UTF_8), properties);
     }

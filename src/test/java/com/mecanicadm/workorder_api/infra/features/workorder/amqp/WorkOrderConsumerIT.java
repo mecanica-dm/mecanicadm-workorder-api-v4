@@ -96,7 +96,7 @@ class WorkOrderConsumerIT extends AbstractIntegrationTest {
         properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
         properties.setMessageId(UUID.randomUUID().toString());
         if (eventType != null) {
-            properties.setHeader("eventType", eventType);
+            properties.setHeader("event-type", eventType);
         }
         Message message = MessageBuilder.withBody(body.getBytes(StandardCharsets.UTF_8)).andProperties(properties).build();
         rabbitTemplate.send(exchange, "", message);
@@ -171,7 +171,7 @@ class WorkOrderConsumerIT extends AbstractIntegrationTest {
     @DisplayName("Deve mandar para a DLQ a mensagem com eventType desconhecido")
     void shouldSendToDeadLetterQueueWhenEventTypeIsUnknown() {
         amqpAdmin.declareBinding(new org.springframework.amqp.core.Binding("workorder", org.springframework.amqp.core.Binding.DestinationType.QUEUE,
-                "workorder-input", "", java.util.Map.of("x-match", "all", "eventType", "DesconhecidoCommand")));
+                "workorder-input", "", java.util.Map.of("x-match", "all", "event-type", "DesconhecidoCommand")));
 
         send("DesconhecidoCommand", "{}");
 

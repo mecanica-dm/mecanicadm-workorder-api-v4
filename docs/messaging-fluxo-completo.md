@@ -79,8 +79,8 @@ Toda mensagem, evento ou command, segue o mesmo padrão. Os **metadados de trans
 
 | Header | Para que serve |
 |---|---|
-| `messageId` (header, UUID) | Identifica **esta** mensagem. Gerado na publicação. É a chave do inbox e o `id` da linha na outbox. Vai só como header, não como propriedade `message_id` do AMQP. |
-| `eventType` (String) | O tipo da mensagem: **o nome da classe** (`CancelWorkOrderIntegrationCommand`, `WorkOrderCanceledEvent`...). É por ele que as filas fazem o bind. |
+| `message-id` (header, UUID) | Identifica **esta** mensagem. Gerado na publicação. É a chave do inbox e o `id` da linha na outbox. Vai só como header, não como propriedade `message_id` do AMQP. |
+| `event-type` (String) | O tipo da mensagem: **o nome da classe** (`CancelWorkOrderIntegrationCommand`, `WorkOrderCanceledEvent`...). É por ele que as filas fazem o bind. |
 | `timestamp` (propriedade AMQP) | Quando a mensagem foi publicada (UTC). Também é o `occurred_at` da outbox. |
 
 **Corpo** (cada evento e command é um `record`, sem interface em comum):
@@ -89,10 +89,10 @@ Toda mensagem, evento ou command, segue o mesmo padrão. Os **metadados de trans
 |---|---|
 | `workOrderId` (UUID) | A OS a que a mensagem se refere. Como a saga é por OS, ele também identifica a saga. |
 
-Cada mensagem acrescenta os **seus próprios campos** no mesmo nível. `messageId`, `eventType` e a data de ocorrência **não** vão no corpo. Exemplo de um command no fio:
+Cada mensagem acrescenta os **seus próprios campos** no mesmo nível. `message-id`, `event-type` e a data de ocorrência **não** vão no corpo. Exemplo de um command no fio:
 
 ```
-headers: messageId = b0a1c2d3-...   eventType = CancelWorkOrderIntegrationCommand
+headers: message-id = b0a1c2d3-...   event-type = CancelWorkOrderIntegrationCommand
 ```
 
 ```json
@@ -116,7 +116,7 @@ Existem 4 exchanges, todas do tipo **headers** e duráveis:
 | `finance-input` | quem manda commands ao finance | finance-api |
 | `finance-output` | finance-api, publicando eventos | quem quer ouvir o finance |
 
-A regra de roteamento é: **o header AMQP `eventType` da mensagem tem que bater com o `eventType` do bind da fila.** Quem quer receber um tipo de mensagem cria uma fila e faz o bind direto nela, com `x-match = all` e `eventType = <nome da classe>`.
+A regra de roteamento é: **o header AMQP `event-type` da mensagem tem que bater com o `event-type` do bind da fila.** Quem quer receber um tipo de mensagem cria uma fila e faz o bind direto nela, com `x-match = all` e `event-type = <nome da classe>`.
 
 ### Quem cria a topologia
 
@@ -132,7 +132,7 @@ Se a fila não existir, o listener não sobe. O arquivo cria as exchanges `worko
 
 A workorder-api tem **uma única fila**, `workorder`, ligada à `workorder-input` com **um bind por command** (todos com `x-match = all`):
 
-| Bind (`eventType`) | Fila |
+| Bind (`event-type`) | Fila |
 |---|---|
 | `CancelWorkOrderIntegrationCommand` | `workorder` |
 | `AuthorizeWorkOrderIntegrationCommand` | `workorder` |
@@ -168,25 +168,25 @@ Exemplo: o usuário diagnostica uma OS pela API.
  │  OutboxPublisher  (@Scheduled, a cada 1 s)       │
  │  1. Lê um lote de linhas pendentes               │
  │  2. Envia ao RabbitMQ (exchange workorder-output)│
- │     com o header eventType                       │
+ │     com o header event-type                       │
  │  3. ESPERA O CONFIRM do RabbitMQ                 │
  │  4. Só então marca a linha como publicada        │
  └───────────────────────────────────────────────┘
         │
         ▼
-   exchange workorder-output ──(header eventType)──► filas interessadas
+   exchange workorder-output ──(header event-type)──► filas interessadas
 ```
 
 ### Quem faz o quê
 
 - **`MessagePublisher` (core):** a porta de publicação. Tem um método só, `publish(workOrderId, mensagem)`, e aceita qualquer objeto como mensagem. O use case não sabe se ela vai para o RabbitMQ ou para uma tabela. É a regra da arquitetura limpa: o core não conhece tecnologia.
-- **Eventos (core):** cada evento é um `record`. O método `X.of(workOrder, ...)` monta o corpo a partir dos objetos que o use case já tem em mãos. Só Created e Updated carregam os dados da OS (nomes e preços); os demais eventos levam apenas o `workOrderId`, porque quem consome já tem os dados a partir deles. Esses dois recebem um `WorkOrderDetails`, que o use case lê com **uma única consulta**, `WorkOrderGateway.findDetailsById`. É uma query nativa que já devolve a OS com os itens de mão de obra e de material, com nome e preço do cadastro. O evento não acessa gateways. O `messageId` e o `eventType` (nome da classe) são definidos pelo `OutboxMessagePublisher` na publicação.
+- **Eventos (core):** cada evento é um `record`. O método `X.of(workOrder, ...)` monta o corpo a partir dos objetos que o use case já tem em mãos. Só Created e Updated carregam os dados da OS (nomes e preços); os demais eventos levam apenas o `workOrderId`, porque quem consome já tem os dados a partir deles. Esses dois recebem um `WorkOrderDetails`, que o use case lê com **uma única consulta**, `WorkOrderGateway.findDetailsById`. É uma query nativa que já devolve a OS com os itens de mão de obra e de material, com nome e preço do cadastro. O evento não acessa gateways. O `messageId` e o `event-type` (nome da classe) são definidos pelo `OutboxMessagePublisher` na publicação.
 - **`OutboxMessagePublisher` (infra):** implementa a porta. Faz o `INSERT` na tabela `outbox`. Exige transação aberta (`MANDATORY`), porque a graça é gravar junto com a OS.
 - **`TransactionalProxy` (infra):** os use cases não têm `@Transactional`, pois o core não usa Spring. Este proxy abre a transação em volta deles, e é montado na `WorkOrderConfiguration`.
 - **`OutboxPublisher` (infra):** um único componente com dois métodos agendados.
   - **`publishPending`** (a cada 1 s): numa transação, trava até 50 linhas pendentes na ordem da `sequence` (`SELECT ... FOR UPDATE`). Para cada uma, envia ao RabbitMQ pelo `RabbitOutboxMessageSender` e, com o confirm, marca `status = PUBLISHED` e preenche `published_at`. **Não há nova tentativa**: se o envio falhar, a linha vira `status = FAILED` com o motivo em `last_error`, e o lote segue com as demais.
   - **`cleanPublished`** (todo dia às 3h): apaga as linhas já publicadas há mais de 7 dias.
-- **`RabbitOutboxMessageSender` (infra):** publica na `workorder-output` com o header `eventType` e espera o confirm do broker (até 5 s). Nack ou timeout lançam `IllegalStateException`.
+- **`RabbitOutboxMessageSender` (infra):** publica na `workorder-output` com o header `event-type` e espera o confirm do broker (até 5 s). Nack ou timeout lançam `IllegalStateException`.
 - **Desligar o agendamento:** `messaging.outbox.scheduler.enabled: false` (usado nos testes).
 
 > **Regra importante:** o status só vira `PUBLISHED` **depois** do confirm. Se a aplicação cair entre o confirm e o commit, a mensagem é enviada de novo. Isso é aceitável porque o **receptor deduplica pelo `messageId`**.
@@ -198,7 +198,7 @@ Exemplo: o usuário diagnostica uma OS pela API.
 | `id` | É o `messageId`. |
 | `sequence` | Número crescente global; define a ordem de publicação. |
 | `aggregate_id` | A OS (`workOrderId`). |
-| `type` | O `eventType`; vai como header AMQP. |
+| `type` | O `event-type`; vai como header AMQP. |
 | `payload` | A mensagem completa em JSON. |
 | `occurred_at` | Quando ocorreu. |
 | `status` | `PENDING` (aguardando), `PUBLISHED` (confirmada pelo broker) ou `FAILED` (falhou; não é reenviada). |
@@ -211,7 +211,7 @@ As mensagens saem na ordem da `sequence`. Como o lote é travado com `FOR UPDATE
 
 ### Evento sem ninguém interessado
 
-Se nenhuma fila fizer bind em um `eventType`, o RabbitMQ simplesmente descarta a mensagem, e a aplicação a considera publicada. Isso evita que um evento que ninguém assina trave a outbox, mas significa que **quem ainda não tinha fila no momento da publicação perde o evento**.
+Se nenhuma fila fizer bind em um `event-type`, o RabbitMQ simplesmente descarta a mensagem, e a aplicação a considera publicada. Isso evita que um evento que ninguém assina trave a outbox, mas significa que **quem ainda não tinha fila no momento da publicação perde o evento**.
 
 ---
 
@@ -221,18 +221,18 @@ Exemplo: o saga manda "cancele a OS X".
 
 ```
  Saga publica na exchange saga-output
-   header eventType = CancelWorkOrderIntegrationCommand
+   header event-type = CancelWorkOrderIntegrationCommand
         │  (bind saga-output → workorder-input)
         ▼
  Exchange workorder-input
-        │  (bind por eventType)
+        │  (bind por event-type)
         ▼
  Fila workorder
         │
         ▼
  ┌───────────────────────────────────────────────┐
  │ WorkOrderConsumer  (@RabbitListener na classe)    │
- │  o conversor lê o header eventType e transforma    │
+ │  o conversor lê o header event-type e transforma    │
  │  o corpo no command; o Spring escolhe o método     │
  │  @RabbitHandler pelo tipo (onCancel, onAuthorize…) │
  │  consume(): valida e processa (sem retry)           │
@@ -257,7 +257,7 @@ Exemplo: o saga manda "cancele a OS X".
 ### Quem faz o quê
 
 - **Integration commands (infra):** `CancelWorkOrderIntegrationCommand`, `AuthorizeWorkOrderIntegrationCommand`, `ChangesRequestedWorkOrderIntegrationCommand` e `ReleaseWorkOrderVehicleIntegrationCommand` são `record`s em `infra/features/workorder/amqp/command`. Eles são o contrato do que chega do broker (só `workOrderId`, mais `observation` no ChangesRequested). Cada um tem `toCommand()`, que o converte no command do use case (`CancelWorkOrderCommand`, `AuthorizeWorkOrderCommand`, `RequestWorkOrderChangesCommand`, `ReleaseWorkOrderVehicleCommand`). O core não conhece o formato da mensagem.
-- **Conversor (`RabbitMQConfig.commandMessageConverter`):** um `Jackson2JsonMessageConverter` configurado para usar o header `eventType` como identificador do tipo, mapeando `"CancelWorkOrderIntegrationCommand"` para a classe `CancelWorkOrderIntegrationCommand` e assim por diante. Ele lê o corpo diretamente no tipo do integration command e ignora campos desconhecidos, então o remetente pode acrescentar campos sem quebrar o consumer. Header ausente ou `eventType` desconhecido viram `MessageConversionException`, e a mensagem vai para a DLQ sem tentativas. O `ObjectMapper` vem de `MessageJsonSerializer.newObjectMapper()`, o mesmo usado para escrever as mensagens na outbox.
+- **Conversor (`RabbitMQConfig.commandMessageConverter`):** um `Jackson2JsonMessageConverter` configurado para usar o header `event-type` como identificador do tipo, mapeando `"CancelWorkOrderIntegrationCommand"` para a classe `CancelWorkOrderIntegrationCommand` e assim por diante. Ele lê o corpo diretamente no tipo do integration command e ignora campos desconhecidos, então o remetente pode acrescentar campos sem quebrar o consumer. Header ausente ou `event-type` desconhecido viram `MessageConversionException`, e a mensagem vai para a DLQ sem tentativas. O `ObjectMapper` vem de `MessageJsonSerializer.newObjectMapper()`, o mesmo usado para escrever as mensagens na outbox.
 - **`WorkOrderConsumer` (infra/features/workorder/amqp):** o único consumer. Tem o `@RabbitListener` na classe, apontando para a fila `workorder`, e um método `@RabbitHandler` por command. O Spring escolhe o método pelo tipo do objeto convertido. Cada método só chama `consume(command, message, channel, useCase::execute)`.
 - **`MessageConsumer` (infra):** a classe base, o padrão acordado: **qualquer consumer estende dela**. Ela controla o fluxo do inbox, a transação, o ack, a recusa, o registro de falha e a DLQ. O filho só informa qual use case chamar.
 - **`MessageConsumerSupport` (infra):** reúne os colaboradores comuns (inbox e transação).
@@ -276,7 +276,7 @@ Se o ack fosse dado **antes** do commit e a aplicação caísse no meio, o comma
 | **Recusa de negócio** (ex.: `Authorize` em OS já cancelada; o use case lança exceção de domínio) | A transação 1 é desfeita (nada fica pela metade). Uma **segunda transação** registra o `messageId` no inbox com `status = REJECTED`. **Nenhum evento é publicado**: o saga não é avisado da recusa. Um reenvio do mesmo `messageId` é **reprocessado**. | Sim |
 | **OS não existe** | Igual à recusa de negócio. | Sim |
 | **Falha técnica** (banco fora do ar, bug inesperado) | **Sem nova tentativa.** A transação é desfeita, o inbox registra a mensagem com `status = FAILED` e o motivo, e a mensagem vai para a DLQ. | Nack |
-| **Mensagem inválida** (JSON ilegível, sem o header `messageId`, sem `workOrderId`, sem header `eventType` ou com tipo desconhecido) | Não dá para registrar no inbox sem `messageId`. Vai direto para a DLQ. | Nack |
+| **Mensagem inválida** (JSON ilegível, sem o header `message-id`, sem `workOrderId`, sem header `event-type` ou com tipo desconhecido) | Não dá para registrar no inbox sem `messageId`. Vai direto para a DLQ. | Nack |
 
 **Por que a recusa de negócio recebe ack?** Não é erro técnico: o sistema funcionou e decidiu "não". Repetir a mesma mensagem daria o mesmo "não". Por enquanto não existe evento de recusa, então quem enviou o command só descobre olhando o inbox ou os logs.
 
@@ -306,7 +306,7 @@ Para escalar no futuro sem perder a ordem por OS, o caminho é particionar por `
 
 ### Commands que a workorder-api recebe
 
-| `eventType` | Campos próprios | O que a OS faz |
+| `event-type` | Campos próprios | O que a OS faz |
 |---|---|---|
 | `CancelWorkOrderIntegrationCommand` | nenhum | Cancela (só antes da execução). Se já está cancelada, não faz nada e não emite evento. |
 | `AuthorizeWorkOrderIntegrationCommand` | nenhum | `DIAGNOSED` → `AWAITING_EXECUTION` |
@@ -317,7 +317,7 @@ Para escalar no futuro sem perder a ordem por OS, o caminho é particionar por `
 
 Todos levam `workOrderId` no corpo. A coluna mostra o que cada um acrescenta.
 
-| `eventType` | Quando | Campos próprios |
+| `event-type` | Quando | Campos próprios |
 |---|---|---|
 | `WorkOrderCreatedEvent` | OS criada | dados da OS direto no evento (veja abaixo) |
 | `WorkOrderUpdatedEvent` | OS ou itens alterados | dados da OS direto no evento (veja abaixo) |
@@ -336,7 +336,10 @@ Ficam direto no corpo do evento, sem um objeto `workOrder` por fora. Levam tudo 
 
 ```json
 {
-  "workOrderId": "...", "clientId": "...", "vehicleId": "ABC-1234", "description": "...", "status": "RECEIVED",
+  "workOrderId": "...", "description": "...", "status": "RECEIVED",
+  "client": { "id": "...", "name": "Frota ABC Logística", "email": "contato@abc-logistica.com",
+              "document": "79013046002", "phone": "48999999001" },
+  "vehicle": { "licensePlate": "ABC-1234", "model": "Volvo FH 460 - Caminhão", "brand": "Volvo", "modelYear": 2020 },
   "executionStartAt": null, "executionEndAt": null,
   "laborItems": [
     { "id": "...", "laborId": "...", "name": "Troca de óleo", "price": 150.00,
@@ -349,7 +352,7 @@ Ficam direto no corpo do evento, sem um objeto `workOrder` por fora. Levam tudo 
 }
 ```
 
-Os nomes e preços são os do cadastro **no momento da publicação**.
+Os dados de cliente, veículo, mão de obra e material são os do cadastro **no momento da publicação**.
 
 Esses eventos são uma cópia dos dados da OS naquele instante: cliente, veículo, descrição, status, tempos, as listas de mão de obra e material (`LaborItemSnapshot` e `MaterialItemSnapshot`, com ids, nomes, preços e quantidades). Os totais **não** são calculados: quem gera o orçamento soma.
 
@@ -359,14 +362,14 @@ Esses eventos são uma cópia dos dados da OS naquele instante: cliente, veícul
 
 Cenário: o saga quer **autorizar** uma OS diagnosticada, e a aplicação cai no pior momento.
 
-1. O saga publica na `saga-output` (que repassa à `workorder-input`) com `eventType = AuthorizeWorkOrderIntegrationCommand`, `messageId = M1`, para a OS `X`.
-2. O header casa com um dos binds da fila `workorder`. O conversor lê o `eventType`, monta o `AuthorizeWorkOrderIntegrationCommand`, e o Spring chama `WorkOrderConsumer.onAuthorize`.
+1. O saga publica na `saga-output` (que repassa à `workorder-input`) com `event-type = AuthorizeWorkOrderIntegrationCommand`, `message-id = M1`, para a OS `X`.
+2. O header casa com um dos binds da fila `workorder`. O conversor lê o `event-type`, monta o `AuthorizeWorkOrderIntegrationCommand`, e o Spring chama `WorkOrderConsumer.onAuthorize`.
 3. Numa transação: o inbox registra `M1`; o use case muda a OS para `AWAITING_EXECUTION` e grava o `WorkOrderAuthorizedEvent` na outbox; commit.
 4. **A aplicação cai agora**, antes do ack.
 5. O RabbitMQ reentrega a mensagem `M1`.
 6. O consumer chama `process`. O inbox já tem `M1`: **duplicata**. Nada é executado e o consumer dá ack. A OS **não** é autorizada duas vezes.
-7. Enquanto isso, o `OutboxPublisher` encontra o evento pendente, publica na `workorder-output` com `eventType = WorkOrderAuthorizedEvent`, espera o confirm e marca `published_at`.
-8. As filas que fizeram bind nesse `eventType` recebem o evento.
+7. Enquanto isso, o `OutboxPublisher` encontra o evento pendente, publica na `workorder-output` com `event-type = WorkOrderAuthorizedEvent`, espera o confirm e marca `published_at`.
+8. As filas que fizeram bind nesse `event-type` recebem o evento.
 
 Se no passo 3 a OS já estivesse cancelada, a transação seria desfeita e, em outra transação, `M1` seria registrado no inbox como `REJECTED`. Nenhum evento seria publicado, e um reenvio de `M1` seria reprocessado.
 
@@ -391,7 +394,7 @@ infra/messaging/
   consumer/                    MessageConsumer (base), MessageConsumerSupport,
                                ProcessingResult, InvalidMessageException,
                                CommandConsumerProperties
-  config/                      RabbitMQConfig (conversor por eventType, template, container),
+  config/                      RabbitMQConfig (conversor por event-type, template, container),
                                MessagingConfig (agendamento e propriedades)
 
 infra/features/workorder/
@@ -406,7 +409,7 @@ db/migration/                        V10 outbox · V11 inbox · V12 revisão do 
 
 1. Criar o command e o use case no core.
 2. Criar o integration command (`record` com `toCommand()`) em `infra/features/workorder/amqp/command`.
-3. Acrescentá-lo à lista `COMMANDS` do `RabbitMQConfig` (mapeamento do conversor) e um bind por `eventType` em `messaging/workorder-definitions.json`.
+3. Acrescentá-lo à lista `COMMANDS` do `RabbitMQConfig` (mapeamento do conversor) e um bind por `event-type` em `messaging/workorder-definitions.json`.
 4. Acrescentar um método `@RabbitHandler` no `WorkOrderConsumer` chamando `consume(command.workOrderId(), command, message, channel, received -> useCase.execute(received.toCommand()))`.
 
 ---

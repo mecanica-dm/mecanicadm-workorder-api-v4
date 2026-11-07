@@ -18,8 +18,8 @@ import java.util.concurrent.TimeoutException;
 @Component
 public class RabbitOutboxMessageSender {
 
-    public static final String EVENT_TYPE_HEADER = "eventType";
-    public static final String MESSAGE_ID_HEADER = "messageId";
+    public static final String EVENT_TYPE_HEADER = "event-type";
+    public static final String MESSAGE_ID_HEADER = "message-id";
 
     private final RabbitTemplate rabbitTemplate;
     private final String exchange;

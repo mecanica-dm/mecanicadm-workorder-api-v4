@@ -50,7 +50,7 @@ class RabbitOutboxMessageSenderIT {
         Queue queue = new Queue(QUEUE, true);
         admin.declareExchange(exchange);
         admin.declareQueue(queue);
-        admin.declareBinding(BindingBuilder.bind(queue).to(exchange).whereAll(Map.of("eventType", "WorkOrderSampleEvent")).match());
+        admin.declareBinding(BindingBuilder.bind(queue).to(exchange).whereAll(Map.of("event-type", "WorkOrderSampleEvent")).match());
 
         template = new RabbitTemplate(connectionFactory);
         sender = new RabbitOutboxMessageSender(template, EXCHANGE, new OutboxProperties(50, 5000, 7));
@@ -78,8 +78,8 @@ class RabbitOutboxMessageSenderIT {
         assertEquals("{\"hello\":\"world\"}", new String(received.getBody(), StandardCharsets.UTF_8));
         assertNull(received.getMessageProperties().getMessageId());
         assertFalse(received.getMessageProperties().getHeaders().containsKey("spring_returned_message_correlation"));
-        assertEquals("WorkOrderSampleEvent", received.getMessageProperties().getHeader("eventType"));
-        assertEquals(message.getId().toString(), received.getMessageProperties().getHeader("messageId"));
+        assertEquals("WorkOrderSampleEvent", received.getMessageProperties().getHeader("event-type"));
+        assertEquals(message.getId().toString(), received.getMessageProperties().getHeader("message-id"));
         assertEquals("application/json", received.getMessageProperties().getContentType());
     }
 
