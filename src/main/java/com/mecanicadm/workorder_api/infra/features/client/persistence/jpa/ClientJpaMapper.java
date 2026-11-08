@@ -5,6 +5,9 @@ import com.mecanicadm.workorder_api.infra.features.client.persistence.entity.Cli
 
 public class ClientJpaMapper {
 
+    private ClientJpaMapper() {
+    }
+
     public static Client toDomain(ClientJpaEntity entity) {
         return Client.restore(entity.getId(),
                 entity.getName(),

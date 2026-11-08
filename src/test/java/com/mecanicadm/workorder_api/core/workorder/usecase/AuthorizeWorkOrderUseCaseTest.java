@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -48,7 +49,7 @@ class AuthorizeWorkOrderUseCaseTest {
         useCase.execute(new AuthorizeWorkOrderCommand(workOrder.getId()));
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(publisher).publish(org.mockito.ArgumentMatchers.any(), captor.capture());
+        verify(publisher).publish(ArgumentMatchers.any(), captor.capture());
         assertInstanceOf(WorkOrderAuthorizedEvent.class, captor.getValue());
         assertEquals(WorkOrderStatus.AWAITING_EXECUTION, workOrder.getStatus());
         assertEquals(workOrder.getId(), ((WorkOrderAuthorizedEvent) captor.getValue()).workOrderId());
@@ -65,7 +66,7 @@ class AuthorizeWorkOrderUseCaseTest {
                 () -> useCase.execute(new AuthorizeWorkOrderCommand(workOrder.getId())));
 
         assertEquals(WorkOrderStatus.RECEIVED, workOrder.getStatus());
-        verify(publisher, never()).publish(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(publisher, never()).publish(ArgumentMatchers.any(), ArgumentMatchers.any());
         verify(gateway, never()).update(any());
     }
 }

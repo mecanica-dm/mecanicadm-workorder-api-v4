@@ -1,10 +1,12 @@
 package com.mecanicadm.workorder_api.infra.security;
 
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.mecanicadm.workorder_api.core.user.domain.enums.TokenRole;
 import com.mecanicadm.workorder_api.infra.security.exception.InvalidTokenException;
+import java.util.Date;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -72,8 +74,8 @@ class TokenServiceTest {
                 .withIssuer("workorder_api")
                 .withSubject(subject)
                 .withClaim("role", "CLIENT")
-                .withExpiresAt(new java.util.Date(System.currentTimeMillis() + 3600_000))
-                .sign(com.auth0.jwt.algorithms.Algorithm.HMAC256("test-secret")));
+                .withExpiresAt(new Date(System.currentTimeMillis() + 3600_000))
+                .sign(Algorithm.HMAC256("test-secret")));
 
         var claims = tokenService.decodeToken(decoded.getToken());
 
@@ -99,12 +101,12 @@ class TokenServiceTest {
         DecodedJWT decoded = JWT.decode(JWT.create()
                 .withIssuer("outro-emissor")
                 .withSubject("user@test.com")
-                .withExpiresAt(new java.util.Date(System.currentTimeMillis() + 3600_000))
-                .sign(com.auth0.jwt.algorithms.Algorithm.HMAC256("test-secret")));
+                .withExpiresAt(new Date(System.currentTimeMillis() + 3600_000))
+                .sign(Algorithm.HMAC256("test-secret")));
 
-        assertThrows(InvalidTokenException.class, () ->
-                tokenService.decodeToken(decoded.getToken())
-        );
+        String token = decoded.getToken();
+
+        assertThrows(InvalidTokenException.class, () -> tokenService.decodeToken(token));
     }
 
     @Test

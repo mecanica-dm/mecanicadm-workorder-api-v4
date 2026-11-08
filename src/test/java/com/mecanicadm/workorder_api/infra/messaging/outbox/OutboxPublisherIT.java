@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -86,7 +87,7 @@ class OutboxPublisherIT extends AbstractIntegrationTest {
         OutboxJpaEntity failing = pending(UUID.randomUUID());
         OutboxJpaEntity afterFailure = pending(UUID.randomUUID());
         doThrow(new IllegalStateException("nack")).when(sender)
-                .send(org.mockito.ArgumentMatchers.argThat(m -> m.getId().equals(failing.getId())));
+                .send(ArgumentMatchers.argThat(m -> m.getId().equals(failing.getId())));
 
         publisher.publishPending();
 

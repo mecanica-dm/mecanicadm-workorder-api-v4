@@ -9,6 +9,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Path;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -164,7 +165,7 @@ class GlobalExceptionHandlerTest {
             when(emailViolation.getPropertyPath()).thenReturn(emailPath);
             when(emailViolation.getMessage()).thenReturn("O e-mail deve ser válido.");
 
-            throw new ConstraintViolationException("Validation failed", java.util.Set.<ConstraintViolation<?>>of(nameViolation, emailViolation));
+            throw new ConstraintViolationException("Validation failed", Set.<ConstraintViolation<?>>of(nameViolation, emailViolation));
         }
 
         @GetMapping("/test/technical-exception")

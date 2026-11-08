@@ -1,5 +1,6 @@
 package com.mecanicadm.workorder_api.core.labor.domain;
 
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +15,7 @@ class LaborExecutionReportTest {
     @DisplayName("Deve criar relatório de execução com todos os valores")
     void shouldCreateLaborExecutionReportWithAllValues() {
         var stats = new LaborTypeExecutionStats(
-                java.util.UUID.randomUUID(),
+                UUID.randomUUID(),
                 "Troca de Óleo",
                 5L,
                 30.0,

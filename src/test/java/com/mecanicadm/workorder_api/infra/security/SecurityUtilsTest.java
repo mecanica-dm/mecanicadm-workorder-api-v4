@@ -1,6 +1,7 @@
 package com.mecanicadm.workorder_api.infra.security;
 
 import com.mecanicadm.workorder_api.core.user.domain.User;
+import java.lang.reflect.Modifier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class SecurityUtilsTest {
     @DisplayName("Deve lançar exceção ao tentar instanciar classe utilitária")
     void shouldThrowExceptionWhenInstantiatingUtilityClass() throws NoSuchMethodException {
         Constructor<SecurityUtils> constructor = SecurityUtils.class.getDeclaredConstructor();
-        assertTrue(java.lang.reflect.Modifier.isPrivate(constructor.getModifiers()));
+        assertTrue(Modifier.isPrivate(constructor.getModifiers()));
         constructor.setAccessible(true);
         
         InvocationTargetException exception = assertThrows(InvocationTargetException.class, constructor::newInstance);

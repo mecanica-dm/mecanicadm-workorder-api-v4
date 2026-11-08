@@ -33,9 +33,6 @@ public class UserJpaEntity extends AuditEntity {
     @Enumerated(EnumType.STRING)
     private List<UserRole> roles = new ArrayList<>();
 
-    public UserJpaEntity() {
-    }
-
     public UUID getId() {
         return id;
     }

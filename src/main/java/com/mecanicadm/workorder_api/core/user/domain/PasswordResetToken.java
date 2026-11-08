@@ -1,5 +1,6 @@
 package com.mecanicadm.workorder_api.core.user.domain;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -38,6 +39,6 @@ public class PasswordResetToken {
     }
 
     public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiryDate);
+        return LocalDateTime.now(Clock.systemDefaultZone()).isAfter(expiryDate);
     }
 }

@@ -6,6 +6,9 @@ import org.springframework.data.jpa.domain.Specification;
 
 public class UserSpecificationBuilder {
 
+    private UserSpecificationBuilder() {
+    }
+
     public static Specification<UserJpaEntity> buildFilterSpecification(UserFilter filter) {
         if (filter == null) {
             return Specification.where(null);

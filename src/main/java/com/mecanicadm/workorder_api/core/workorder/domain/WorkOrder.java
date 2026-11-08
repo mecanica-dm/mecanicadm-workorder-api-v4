@@ -4,6 +4,7 @@ import com.mecanicadm.workorder_api.core.workorder.domain.enums.LaborExecutionSt
 import com.mecanicadm.workorder_api.core.workorder.domain.enums.WorkOrderStatus;
 import com.mecanicadm.workorder_api.core.workorder.exception.WorkOrderExceptions;
 import com.mecanicadm.workorder_api.shared.domain.AuditDomain;
+import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +22,7 @@ public class WorkOrder extends AuditDomain {
 
     private static final Logger log = LoggerFactory.getLogger(WorkOrder.class);
 
-    private UUID id;
+    private final UUID id;
 
     private UUID clientId;
 
@@ -153,7 +154,7 @@ public class WorkOrder extends AuditDomain {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.IN_EXECUTION.name());
         }
         this.status = WorkOrderStatus.IN_EXECUTION;
-        this.executionStartAt = LocalDateTime.now();
+        this.executionStartAt = LocalDateTime.now(Clock.systemDefaultZone());
         log.info("{\"message\": \"OS Em execução\",  \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
 
@@ -179,7 +180,7 @@ public class WorkOrder extends AuditDomain {
         }
 
         this.status = WorkOrderStatus.EXECUTION_COMPLETED;
-        this.executionEndAt = LocalDateTime.now();
+        this.executionEndAt = LocalDateTime.now(Clock.systemDefaultZone());
         log.info("{\"message\": \"OS Finalizada\",  \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
 

@@ -11,6 +11,8 @@ import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -61,8 +63,9 @@ class OutboxMessagePublisherIT extends AbstractIntegrationTest {
     @DisplayName("Nao deve permitir publicar fora de uma transacao")
     void shouldRejectPublishWhenThereIsNoTransaction() {
         WorkOrderSampleEvent message = newMessage();
+        UUID workOrderId = message.workOrderId();
 
-        assertThrows(IllegalTransactionStateException.class, () -> publisher.publish(message.workOrderId(), message));
+        assertThrows(IllegalTransactionStateException.class, () -> publisher.publish(workOrderId, message));
         assertEquals(0, repository.count());
     }
 }

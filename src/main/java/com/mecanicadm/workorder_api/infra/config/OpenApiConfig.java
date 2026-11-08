@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.parameters.HeaderParameter;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import java.util.ArrayList;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +39,7 @@ public class OpenApiConfig {
     public OperationCustomizer addAcceptLanguageHeader() {
         return (operation, handlerMethod) -> {
             if (operation.getParameters() == null) {
-                operation.setParameters(new java.util.ArrayList<>());
+                operation.setParameters(new ArrayList<>());
             }
 
             operation.addParametersItem(new HeaderParameter()

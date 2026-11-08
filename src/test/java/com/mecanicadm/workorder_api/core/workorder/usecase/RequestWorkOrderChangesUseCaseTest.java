@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -50,7 +51,7 @@ class RequestWorkOrderChangesUseCaseTest {
         useCase.execute(new RequestWorkOrderChangesCommand(workOrder.getId(), "Nao trocar filtro"));
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(publisher).publish(org.mockito.ArgumentMatchers.any(), captor.capture());
+        verify(publisher).publish(ArgumentMatchers.any(), captor.capture());
         WorkOrderChangesRequestedEvent event = assertInstanceOf(WorkOrderChangesRequestedEvent.class, captor.getValue());
         assertEquals("Nao trocar filtro", event.observation());
         assertEquals(WorkOrderStatus.CHANGES_REQUESTED, workOrder.getStatus());
