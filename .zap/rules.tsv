@@ -1,0 +1,5 @@
+# ID	OUTCOME	COMMENT
+90022	IGNORE	Server Error Disclosure
+10107	IGNORE	Client Error Response
+10049	IGNORE	Non-Storable Content
+40009	IGNORE	Server Header Disclosure
