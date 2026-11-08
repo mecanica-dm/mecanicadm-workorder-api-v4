@@ -1,6 +1,7 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.api.dto.response;
 
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
+import java.time.Month;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -27,7 +28,7 @@ class WorkOrderResponseTest {
     void shouldReturnZeroWhenOnlyOneExecutionDateExists() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Troca de oleo");
 
-        ReflectionTestUtils.setField(workOrder, "executionStartAt", LocalDateTime.of(2026, 4, 30, 9, 0));
+        ReflectionTestUtils.setField(workOrder, "executionStartAt", LocalDateTime.of(2026, Month.APRIL, 30, 9, 0));
 
         WorkOrderResponse response = WorkOrderResponse.from(workOrder);
 
@@ -38,8 +39,8 @@ class WorkOrderResponseTest {
     @DisplayName("Deve calcular total de minutos quando inicio e fim da execucao existirem")
     void shouldCalculateTotalExecutionTimeWhenExecutionDatesArePresent() {
         WorkOrder workOrder = WorkOrder.create(UUID.randomUUID(), "VEH-001", "Troca de oleo");
-        LocalDateTime start = LocalDateTime.of(2026, 4, 30, 8, 15);
-        LocalDateTime end = LocalDateTime.of(2026, 4, 30, 9, 0);
+        LocalDateTime start = LocalDateTime.of(2026, Month.APRIL, 30, 8, 15);
+        LocalDateTime end = LocalDateTime.of(2026, Month.APRIL, 30, 9, 0);
 
         ReflectionTestUtils.setField(workOrder, "executionStartAt", start);
         ReflectionTestUtils.setField(workOrder, "executionEndAt", end);

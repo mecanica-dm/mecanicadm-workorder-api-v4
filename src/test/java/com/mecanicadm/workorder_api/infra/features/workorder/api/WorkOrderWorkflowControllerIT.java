@@ -102,22 +102,6 @@ class WorkOrderWorkflowControllerIT extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Deve registrar pagamento e retornar 204 No Content")
-    void shouldRecordPaymentAndReturn204() {
-        UUID workOrderId = UUID.randomUUID();
-
-        RestAssuredMockMvc.given()
-                .postProcessors(csrf())
-                .when()
-                .post("/work-orders/{id}/step/deliver", workOrderId)
-                .then()
-                .statusCode(HttpStatus.NO_CONTENT.value());
-
-        verify(deliverWorkOrderUseCase, times(1)).execute(any());
-    }
-
-    @Test
-    @WithMockUser
     @DisplayName("Deve entregar work order e retornar 204 No Content")
     void shouldDeliverAndReturn204() {
         UUID workOrderId = UUID.randomUUID();

@@ -33,6 +33,7 @@ public class RabbitOutboxMessageSender {
         this.properties = properties;
     }
 
+    @SuppressWarnings("java:S2143")
     public void send(OutboxJpaEntity outbox) {
         Message message = MessageBuilder
                 .withBody(outbox.getPayload().getBytes(StandardCharsets.UTF_8))

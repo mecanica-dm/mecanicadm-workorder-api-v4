@@ -5,6 +5,9 @@ import com.mecanicadm.workorder_api.infra.features.stockmovements.persistence.en
 
 public class StockMovementsJpaMapper {
 
+    private StockMovementsJpaMapper() {
+    }
+
     public static StockMovements toDomain(StockMovementsJpaEntity entity) {
         return StockMovements.restore(
                 entity.getId(), entity.getMaterialId(), entity.getWorkOrderId(),

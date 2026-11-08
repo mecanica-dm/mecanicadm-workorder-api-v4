@@ -1,11 +1,13 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.amqp;
 
 import com.mecanicadm.workorder_api.testutils.AbstractIntegrationTest;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.AmqpAdmin;
+import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
@@ -170,8 +172,8 @@ class WorkOrderConsumerIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("Deve mandar para a DLQ a mensagem com eventType desconhecido")
     void shouldSendToDeadLetterQueueWhenEventTypeIsUnknown() {
-        amqpAdmin.declareBinding(new org.springframework.amqp.core.Binding("workorder", org.springframework.amqp.core.Binding.DestinationType.QUEUE,
-                "workorder-input", "", java.util.Map.of("x-match", "all", "event-type", "DesconhecidoCommand")));
+        amqpAdmin.declareBinding(new Binding("workorder", Binding.DestinationType.QUEUE,
+                "workorder-input", "", Map.of("x-match", "all", "event-type", "DesconhecidoCommand")));
 
         send("DesconhecidoCommand", "{}");
 

@@ -6,6 +6,7 @@ import com.mecanicadm.workorder_api.core.user.domain.port.PasswordResetTokenGate
 import com.mecanicadm.workorder_api.core.user.domain.port.UserGateway;
 import com.mecanicadm.workorder_api.core.user.usecase.command.RequestPasswordResetCommand;
 import com.mecanicadm.workorder_api.shared.usecase.VoidUseCase;
+import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,7 @@ public class RequestPasswordResetUseCase implements VoidUseCase<RequestPasswordR
         passwordResetTokenGateway.deleteByUser(user);
 
         String token = UUID.randomUUID().toString();
-        PasswordResetToken myToken = new PasswordResetToken(token, user, LocalDateTime.now().plusMinutes(10));
+        PasswordResetToken myToken = new PasswordResetToken(token, user, LocalDateTime.now(Clock.systemDefaultZone()).plusMinutes(10));
         passwordResetTokenGateway.save(myToken);
 
         logger.info("""

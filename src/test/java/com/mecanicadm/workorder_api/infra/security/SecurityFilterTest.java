@@ -10,6 +10,8 @@ import com.mecanicadm.workorder_api.core.user.domain.port.UserGateway;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.LocalDateTime;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -69,9 +71,9 @@ class SecurityFilterTest {
         String token = "client-token";
         String document = "529.982.247-25";
         Client client = Client.restore(
-                java.util.UUID.randomUUID(), "Cliente Teste", "cliente@teste.com",
+                UUID.randomUUID(), "Cliente Teste", "cliente@teste.com",
                 "52998224725", "48999999000",
-                java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), null);
+                LocalDateTime.now(), LocalDateTime.now(), null);
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
         when(tokenService.decodeToken(token)).thenReturn(new TokenClaims(document, TokenRole.CLIENT));

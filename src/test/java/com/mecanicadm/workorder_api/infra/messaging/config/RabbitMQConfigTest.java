@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConversionException;
 
 import java.nio.charset.StandardCharsets;
@@ -65,7 +66,11 @@ class RabbitMQConfigTest {
     void shouldRefuseConversionWhenEventTypeIsUnknownOrMissing() {
         RabbitMQConfig config = new RabbitMQConfig();
 
-        assertThrows(MessageConversionException.class, () -> config.commandMessageConverter().fromMessage(message("DesconhecidoCommand", "{}")));
-        assertThrows(MessageConversionException.class, () -> config.commandMessageConverter().fromMessage(message(null, "{}")));
+        Jackson2JsonMessageConverter converter = config.commandMessageConverter();
+        Message unknownType = message("DesconhecidoCommand", "{}");
+        Message missingType = message(null, "{}");
+
+        assertThrows(MessageConversionException.class, () -> converter.fromMessage(unknownType));
+        assertThrows(MessageConversionException.class, () -> converter.fromMessage(missingType));
     }
 }

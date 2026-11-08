@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -65,7 +66,7 @@ class CancelWorkOrderUseCaseTest {
         useCase.execute(new CancelWorkOrderCommand(workOrder.getId()));
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(publisher).publish(org.mockito.ArgumentMatchers.any(), captor.capture());
+        verify(publisher).publish(ArgumentMatchers.any(), captor.capture());
         Object message = captor.getValue();
         WorkOrderCanceledEvent event = assertInstanceOf(WorkOrderCanceledEvent.class, message);
         assertAll(
@@ -84,7 +85,7 @@ class CancelWorkOrderUseCaseTest {
 
         useCase.execute(new CancelWorkOrderCommand(workOrder.getId()));
 
-        verify(publisher, never()).publish(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(publisher, never()).publish(ArgumentMatchers.any(), ArgumentMatchers.any());
         verify(gateway, never()).update(any());
     }
 
@@ -100,7 +101,7 @@ class CancelWorkOrderUseCaseTest {
                 () -> useCase.execute(new CancelWorkOrderCommand(workOrder.getId())));
 
         assertEquals(before, workOrder.getStatus());
-        verify(publisher, never()).publish(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(publisher, never()).publish(ArgumentMatchers.any(), ArgumentMatchers.any());
         verify(gateway, never()).update(any());
     }
 

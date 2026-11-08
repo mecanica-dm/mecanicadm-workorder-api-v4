@@ -5,6 +5,9 @@ import com.mecanicadm.workorder_api.infra.features.user.persistence.entity.Passw
 
 public class PasswordResetTokenJpaMapper {
 
+    private PasswordResetTokenJpaMapper() {
+    }
+
     public static PasswordResetTokenJpaEntity toEntity(PasswordResetToken token) {
         PasswordResetTokenJpaEntity entity = new PasswordResetTokenJpaEntity();
         entity.setId(token.getId());

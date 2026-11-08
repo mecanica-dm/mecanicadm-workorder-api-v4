@@ -7,6 +7,7 @@ import com.mecanicadm.workorder_api.infra.config.jackson.ExcludeZeroFilter;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,6 +48,6 @@ public record WorkOrderResponse(
         if (start == null || end == null) {
             return 0L;
         }
-        return Duration.between(start, end).toMinutes();
+        return Duration.between(start.atZone(ZoneId.systemDefault()), end.atZone(ZoneId.systemDefault())).toMinutes();
     }
 }

@@ -2,7 +2,10 @@ package com.mecanicadm.workorder_api.core.workorder.usecase;
 
 import com.mecanicadm.workorder_api.core.shared.messaging.MessagePublisher;
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
+import com.mecanicadm.workorder_api.core.workorder.domain.events.ClientSnapshot;
+import com.mecanicadm.workorder_api.core.workorder.domain.events.VehicleSnapshot;
 import com.mecanicadm.workorder_api.core.workorder.domain.events.WorkOrderCreatedEvent;
+import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderDetails;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderGateway;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.CreateWorkOrderCommand;
 import com.mecanicadm.workorder_api.core.workorder.usecase.command.CreateWorkOrderMaterialItemCommand;
@@ -11,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -56,10 +60,10 @@ class CreateWorkOrderUseCaseTest {
         });
         when(gateway.findDetailsById(any())).thenAnswer(invocation -> {
             WorkOrder created = stored.get();
-            return Optional.of(new com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderDetails(
+            return Optional.of(new WorkOrderDetails(
                     created.getId(),
-                    new com.mecanicadm.workorder_api.core.workorder.domain.events.ClientSnapshot(created.getClientId(), "Cliente", "cliente@test.com", "12345678900", "48999999999"),
-                    new com.mecanicadm.workorder_api.core.workorder.domain.events.VehicleSnapshot(created.getVehicleId(), "Modelo", "Marca", 2020),
+                    new ClientSnapshot(created.getClientId(), "Cliente", "cliente@test.com", "12345678900", "48999999999"),
+                    new VehicleSnapshot(created.getVehicleId(), "Modelo", "Marca", 2020),
                     created.getDescription(),
                     created.getStatus(), null, null, List.of(), List.of()));
         });
@@ -67,7 +71,7 @@ class CreateWorkOrderUseCaseTest {
 
     private Object publishedMessage() {
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(publisher).publish(org.mockito.ArgumentMatchers.any(), captor.capture());
+        verify(publisher).publish(ArgumentMatchers.any(), captor.capture());
         return captor.getValue();
     }
 
@@ -139,9 +143,9 @@ class CreateWorkOrderUseCaseTest {
 
         UUID resultId = useCase.execute(command);
 
-        verify(addLaborToWorkOrderUseCase, times(1)).attach(eq(resultId), eq(laborId));
+        verify(addLaborToWorkOrderUseCase, times(1)).attach(resultId, laborId);
         verify(addMaterialToWorkOrderUseCase, times(1)).attach(resultId, materialId, 3);
-        verify(publisher, times(1)).publish(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(publisher, times(1)).publish(ArgumentMatchers.any(), ArgumentMatchers.any());
     }
 
     @Test
@@ -153,6 +157,6 @@ class CreateWorkOrderUseCaseTest {
         useCase.execute(command);
 
         verifyNoInteractions(addLaborToWorkOrderUseCase, addMaterialToWorkOrderUseCase);
-        verify(publisher, times(1)).publish(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(publisher, times(1)).publish(ArgumentMatchers.any(), ArgumentMatchers.any());
     }
 }

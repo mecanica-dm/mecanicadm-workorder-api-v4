@@ -182,7 +182,9 @@ class CommandProcessingIT extends AbstractIntegrationTest {
     void shouldLeaveNoTraceWhenTechnicalFailureHappensAfterEffect() {
         UUID messageId = UUID.randomUUID();
 
-        assertThrows(IllegalStateException.class, () -> process(cancel(messageId, RECEIVED), command -> {
+        CancelWorkOrderIntegrationCommand cancelCommand = cancel(messageId, RECEIVED);
+
+        assertThrows(IllegalStateException.class, () -> process(cancelCommand, command -> {
             cancelWorkOrderUseCase.execute(command.toCommand());
             throw new IllegalStateException("falha tecnica simulada");
         }));

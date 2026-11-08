@@ -7,6 +7,7 @@ import com.mecanicadm.workorder_api.core.user.domain.port.UserGateway;
 import com.mecanicadm.workorder_api.core.user.exception.UserExceptions;
 import com.mecanicadm.workorder_api.core.user.usecase.command.ResetPasswordCommand;
 import com.mecanicadm.workorder_api.shared.usecase.VoidUseCase;
+import java.time.Clock;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
@@ -30,7 +31,7 @@ public class ResetPasswordUseCase implements VoidUseCase<ResetPasswordCommand> {
         PasswordResetToken resetToken = passwordResetTokenGateway.findByToken(cmd.token())
                 .orElseThrow(UserExceptions.TokenInvalid::new);
 
-        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now(Clock.systemDefaultZone()))) {
             throw new UserExceptions.TokenExpired();
         }
 

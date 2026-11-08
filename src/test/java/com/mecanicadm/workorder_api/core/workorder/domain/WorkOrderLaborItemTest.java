@@ -27,7 +27,9 @@ class WorkOrderLaborItemTest {
     @Test
     @DisplayName("Nao deve criar item de mão de obra com laborId nulo")
     void shouldNotCreateLaborItemWithNullLaborId() {
-        assertThrows(NullPointerException.class, () -> WorkOrderLaborItem.create(null, UUID.randomUUID()));
+        UUID workOrderId = UUID.randomUUID();
+
+        assertThrows(NullPointerException.class, () -> WorkOrderLaborItem.create(null, workOrderId));
     }
 
     @Test

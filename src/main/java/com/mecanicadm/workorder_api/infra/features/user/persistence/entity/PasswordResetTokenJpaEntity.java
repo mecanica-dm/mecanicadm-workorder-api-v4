@@ -23,8 +23,6 @@ public class PasswordResetTokenJpaEntity {
     @Column(nullable = false)
     private LocalDateTime expiryDate;
 
-    public PasswordResetTokenJpaEntity() {}
-
     public UUID getId() {
         return id;
     }

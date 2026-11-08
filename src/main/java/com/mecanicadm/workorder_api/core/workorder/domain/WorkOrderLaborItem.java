@@ -3,6 +3,7 @@ package com.mecanicadm.workorder_api.core.workorder.domain;
 import com.mecanicadm.workorder_api.core.workorder.domain.enums.LaborExecutionStatus;
 import com.mecanicadm.workorder_api.core.workorder.exception.WorkOrderExceptions;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -56,7 +57,7 @@ public class WorkOrderLaborItem {
             throw new WorkOrderExceptions.InvalidLaborStatusTransition(this.status.name(), LaborExecutionStatus.IN_EXECUTION.name());
         }
         this.status = LaborExecutionStatus.IN_EXECUTION;
-        this.executionStartAt = LocalDateTime.now();
+        this.executionStartAt = LocalDateTime.now(Clock.systemDefaultZone());
     }
 
     public void finishExecution() {
@@ -64,7 +65,7 @@ public class WorkOrderLaborItem {
             throw new WorkOrderExceptions.InvalidLaborStatusTransition(this.status.name(), LaborExecutionStatus.EXECUTION_COMPLETED.name());
         }
         this.status = LaborExecutionStatus.EXECUTION_COMPLETED;
-        this.executionEndAt = LocalDateTime.now();
+        this.executionEndAt = LocalDateTime.now(Clock.systemDefaultZone());
     }
 
     private void validate() {

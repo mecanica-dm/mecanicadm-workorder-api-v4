@@ -1,6 +1,7 @@
 package com.mecanicadm.workorder_api.infra.features.workorder.api.dto.response;
 
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrderLaborItem;
+import java.time.Month;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -17,7 +18,7 @@ class WorkOrderLaborItemResponseTest {
     void shouldReturnZeroWhenExecutionStartAtIsNull() {
         WorkOrderLaborItem laborItem = WorkOrderLaborItem.create(UUID.randomUUID(), UUID.randomUUID());
 
-        ReflectionTestUtils.setField(laborItem, "executionEndAt", LocalDateTime.of(2026, 4, 30, 10, 0));
+        ReflectionTestUtils.setField(laborItem, "executionEndAt", LocalDateTime.of(2026, Month.APRIL, 30, 10, 0));
 
         WorkOrderLaborItemResponse response = WorkOrderLaborItemResponse.from(laborItem);
 
@@ -29,7 +30,7 @@ class WorkOrderLaborItemResponseTest {
     void shouldReturnZeroWhenExecutionEndAtIsNull() {
         WorkOrderLaborItem laborItem = WorkOrderLaborItem.create(UUID.randomUUID(), UUID.randomUUID());
 
-        ReflectionTestUtils.setField(laborItem, "executionStartAt", LocalDateTime.of(2026, 4, 30, 9, 0));
+        ReflectionTestUtils.setField(laborItem, "executionStartAt", LocalDateTime.of(2026, Month.APRIL, 30, 9, 0));
 
         WorkOrderLaborItemResponse response = WorkOrderLaborItemResponse.from(laborItem);
 
@@ -40,8 +41,8 @@ class WorkOrderLaborItemResponseTest {
     @DisplayName("Deve calcular total de minutos quando datas de inicio e fim existem")
     void shouldCalculateTotalExecutionTimeWhenExecutionStartAtAndExecutionEndAtArePresent() {
         WorkOrderLaborItem laborItem = WorkOrderLaborItem.create(UUID.randomUUID(), UUID.randomUUID());
-        LocalDateTime start = LocalDateTime.of(2026, 4, 30, 9, 0);
-        LocalDateTime end = LocalDateTime.of(2026, 4, 30, 10, 30);
+        LocalDateTime start = LocalDateTime.of(2026, Month.APRIL, 30, 9, 0);
+        LocalDateTime end = LocalDateTime.of(2026, Month.APRIL, 30, 10, 30);
 
         ReflectionTestUtils.setField(laborItem, "executionStartAt", start);
         ReflectionTestUtils.setField(laborItem, "executionEndAt", end);

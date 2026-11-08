@@ -5,6 +5,9 @@ import com.mecanicadm.workorder_api.infra.features.vehicle.persistence.entity.Ve
 
 public class VehicleJpaMapper {
 
+    private VehicleJpaMapper() {
+    }
+
     public static Vehicle toDomain(VehicleJpaEntity entity) {
         return Vehicle.restore(
                 entity.getModel(), entity.getLicensePlate(), entity.getBrand(), entity.getModelYear(),

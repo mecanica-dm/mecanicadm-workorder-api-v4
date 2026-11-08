@@ -5,6 +5,9 @@ import com.mecanicadm.workorder_api.infra.features.user.persistence.entity.UserJ
 
 public class UserJpaMapper {
 
+    private UserJpaMapper() {
+    }
+
     public static UserJpaEntity toEntity(User user) {
         UserJpaEntity entity = new UserJpaEntity();
         entity.setId(user.getId());
