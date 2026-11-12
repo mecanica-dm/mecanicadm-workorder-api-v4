@@ -1,0 +1,11 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Configuração local (use os arquivos .example como modelo).
+terraform.tfvars
+*.auto.tfvars
+backend.hcl

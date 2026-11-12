@@ -1,0 +1,82 @@
+# Job de seed do banco. O ConfigMap "mecanicadm-seed-sql" e criado pela
+# pipeline a partir de devops/k8s/seed/init.sql antes do apply deste manifest.
+#
+# Como Jobs sao imutaveis, a pipeline remove o Job anterior antes de recriar:
+#   kubectl -n mecanicadm delete job mecanicadm-seed --ignore-not-found
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mecanicadm-seed
+  namespace: mecanicadm
+  labels:
+    app.kubernetes.io/name: mecanicadm
+    app.kubernetes.io/instance: mecanicadm
+    app.kubernetes.io/part-of: mecanicadm
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mecanicadm-seed
+        app.kubernetes.io/instance: mecanicadm
+        app.kubernetes.io/part-of: mecanicadm
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: postgres:15-alpine
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: mecanicadm-db-secrets
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: mecanicadm-db-secrets
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mecanicadm-db-secrets
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mecanicadm-db-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mecanicadm-db-secrets
+                  key: DB_PASSWORD
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              API_URL="http://mecanicadm:80/api/actuator/health/readiness"
+              i=0
+              until wget -qO- "$API_URL" | grep -q '"status":"UP"'; do
+                i=$((i+1))
+                if [ "$i" -ge 60 ]; then
+                  echo "Timeout: API nao ficou pronta em 5 minutos."
+                  exit 1
+                fi
+                echo "Aguardando API ficar pronta (Flyway/migrations)... ($i/60)"
+                sleep 5
+              done
+              echo "API pronta! Aplicando init.sql..."
+              PGPASSWORD="$DB_PASSWORD" psql \
+                -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+                -f /seed/init.sql
+              echo "Seed aplicado com sucesso."
+          volumeMounts:
+            - name: seed-sql
+              mountPath: /seed
+      volumes:
+        - name: seed-sql
+          configMap:
+            name: mecanicadm-seed-sql
