@@ -1,5 +1,7 @@
 # Mensageria da workorder-api: como funciona
 
+> **Material de apoio.** Explicação didática escrita durante o desenvolvimento; pode estar desatualizada em detalhes. A referência vigente é [arquitetura-da-mensageria.md](../arquitetura-da-mensageria.md), com os ADRs [012](../adr/012-evento_de_recusa_de_command.md) e [013](../adr/013-outbox_inbox_e_politica_de_ack.md).
+
 Este documento explica, do zero, como a workorder-api troca mensagens com os outros serviços pelo RabbitMQ. Ele não assume que você conhece Outbox, Inbox, ack ou exchanges. Os conceitos vêm primeiro, depois o fluxo e o mapa do código.
 
 ---
@@ -273,12 +275,12 @@ Se o ack fosse dado **antes** do commit e a aplicação caísse no meio, o comma
 |---|---|---|
 | **Caso normal** | Inbox, use case e outbox no mesmo commit. | Sim |
 | **Duplicata** (`messageId` já no inbox) | Não executa nada. | Sim |
-| **Recusa de negócio** (ex.: `Authorize` em OS já cancelada; o use case lança exceção de domínio) | A transação 1 é desfeita (nada fica pela metade). Uma **segunda transação** registra o `messageId` no inbox com `status = REJECTED`. **Nenhum evento é publicado**: o saga não é avisado da recusa. Um reenvio do mesmo `messageId` é **reprocessado**. | Sim |
+| **Recusa de negócio** (ex.: `Authorize` em OS já cancelada; o use case lança exceção de domínio) | A transação 1 é desfeita (nada fica pela metade). Uma **segunda transação** registra o `messageId` no inbox com `status = REJECTED`. Na **mesma transação** é gravado na outbox o `WorkOrderCommandRejectedEvent`, que avisa a saga da recusa (veja a ADR 012). Um reenvio do mesmo `messageId` é **reprocessado**, e emite o evento de novo se for recusado outra vez. | Sim |
 | **OS não existe** | Igual à recusa de negócio. | Sim |
 | **Falha técnica** (banco fora do ar, bug inesperado) | **Sem nova tentativa.** A transação é desfeita, o inbox registra a mensagem com `status = FAILED` e o motivo, e a mensagem vai para a DLQ. | Nack |
 | **Mensagem inválida** (JSON ilegível, sem o header `message-id`, sem `workOrderId`, sem header `event-type` ou com tipo desconhecido) | Não dá para registrar no inbox sem `messageId`. Vai direto para a DLQ. | Nack |
 
-**Por que a recusa de negócio recebe ack?** Não é erro técnico: o sistema funcionou e decidiu "não". Repetir a mesma mensagem daria o mesmo "não". Por enquanto não existe evento de recusa, então quem enviou o command só descobre olhando o inbox ou os logs.
+**Por que a recusa de negócio recebe ack?** Não é erro técnico: o sistema funcionou e decidiu "não". Repetir a mesma mensagem daria o mesmo "não". Quem enviou o command é avisado pelo `WorkOrderCommandRejectedEvent`.
 
 **Por que duas transações na recusa?** Quando o use case falha, a transação inteira é desfeita, inclusive o registro do inbox. É preciso uma nova transação para deixar a recusa registrada como `REJECTED`, o que mantém o histórico de que a mensagem chegou e não foi aplicada.
 
@@ -308,7 +310,7 @@ Para escalar no futuro sem perder a ordem por OS, o caminho é particionar por `
 
 | `event-type` | Campos próprios | O que a OS faz |
 |---|---|---|
-| `CancelWorkOrderIntegrationCommand` | nenhum | Cancela (só antes da execução). Se já está cancelada, não faz nada e não emite evento. |
+| `CancelWorkOrderIntegrationCommand` | nenhum | Cancela a OS em qualquer status (a saga precisa compensar em qualquer fase) e devolve o estoque. Se já está cancelada, não faz nada e não emite evento. |
 | `AuthorizeWorkOrderIntegrationCommand` | nenhum | `DIAGNOSED` → `AWAITING_EXECUTION` |
 | `ChangesRequestedWorkOrderIntegrationCommand` | `observation` | Vai para `CHANGES_REQUESTED` (editável de novo) |
 | `ReleaseWorkOrderVehicleIntegrationCommand` | nenhum | `EXECUTION_COMPLETED` → `PAID` |
@@ -329,6 +331,7 @@ Todos levam `workOrderId` no corpo. A coluna mostra o que cada um acrescenta.
 | `WorkOrderVehicleReleasedEvent` | Command `Release` aceito | nenhum |
 | `WorkOrderVehicleDeliveredEvent` | Veículo entregue | nenhum |
 | `WorkOrderCanceledEvent` | OS cancelada | nenhum |
+| `WorkOrderCommandRejectedEvent` | Command recusado por regra de negócio | `eventType` (o command recusado), `exception` (a exceção de domínio) e `message` (o motivo, em pt-BR) |
 
 #### Os dados da OS nos eventos Created e Updated
 
