@@ -1,0 +1,31 @@
+# Roteia os prefixos /api e /auth para a API Spring Boot via Kong.
+# Fluxo: Cliente -> Kong (Service kong-proxy, LoadBalancer) -> Ingress -> Service mecanicadm -> Pod.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mecanicadm
+  namespace: mecanicadm
+  labels:
+    app.kubernetes.io/name: mecanicadm
+    app.kubernetes.io/instance: mecanicadm
+    app.kubernetes.io/part-of: mecanicadm
+spec:
+  ingressClassName: kong
+  rules:
+    - host: "api.mecanicadm.com.br"
+      http:
+        paths:
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: mecanicadm
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: mecanicadm
+                port:
+                  number: 80

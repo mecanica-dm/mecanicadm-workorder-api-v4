@@ -1,0 +1,149 @@
+name: Deploy Aplicação - Kubernetes (Mecânica DM API)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "devops/k8s/**"
+      - ".github/workflows/app-deploy.yml"
+  repository_dispatch:
+    types: [ app-image-published ]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag da imagem a implantar (padrão: prod-latest)"
+        required: false
+        default: ""
+  # Depois que o Terraform aplica o banco/secrets, o deploy roda sozinho.
+  workflow_run:
+    workflows: [ "Terraform - Workorder DB + Secrets" ]
+    types: [ completed ]
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  ENVIRONMENT: prod
+  NAMESPACE: mecanicadm
+  IMAGE_REPO: ${{ secrets.DOCKER_IMAGE || 'diegopriess/mecanica-dm' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: prod
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configura credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Atualiza o kubeconfig do EKS
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ vars.EKS_CLUSTER_NAME || 'mecanicadm-prod' }} \
+            --region ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Garante o namespace da aplicação
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml \
+            | kubectl apply -f -
+
+      # As credenciais do banco e o JWT são publicados no SSM pelo Terraform
+      # (devops/terraform). A pipeline lê os valores e materializa os Secrets,
+      # evitando credenciais versionadas no repositório.
+      - name: Cria o Secret do banco a partir do SSM
+        env:
+          SSM_DB_PREFIX: /mecanicadm/prod/workorder
+        run: |
+          set -euo pipefail
+
+          ssm() {
+            aws ssm get-parameter --name "$1" --with-decryption \
+              --query Parameter.Value --output text
+          }
+
+          DB_HOST="$(ssm "$SSM_DB_PREFIX/db_host")"
+          DB_PORT="$(ssm "$SSM_DB_PREFIX/db_port")"
+          DB_NAME="$(ssm "$SSM_DB_PREFIX/db_name")"
+          DB_USER="$(ssm "$SSM_DB_PREFIX/db_user")"
+          DB_PASSWORD="$(ssm "$SSM_DB_PREFIX/db_password")"
+
+          kubectl create secret generic mecanicadm-db-secrets \
+            --namespace ${{ env.NAMESPACE }} \
+            --from-literal=DB_HOST="$DB_HOST" \
+            --from-literal=DB_PORT="$DB_PORT" \
+            --from-literal=DB_NAME="$DB_NAME" \
+            --from-literal=DB_USER="$DB_USER" \
+            --from-literal=DB_PASSWORD="$DB_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Cria o Secret da aplicação
+        env:
+          JWT_SECRET_PARAM: /mecanicadm/prod/jwt_secret
+        run: |
+          set -euo pipefail
+
+          JWT_SECRET="$(aws ssm get-parameter --name "$JWT_SECRET_PARAM" \
+            --with-decryption --query Parameter.Value --output text)"
+
+          kubectl create secret generic mecanicadm-secrets \
+            --namespace ${{ env.NAMESPACE }} \
+            --from-literal=MAIL_USERNAME="${{ secrets.MAIL_USERNAME }}" \
+            --from-literal=MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}" \
+            --from-literal=NEW_RELIC_LICENSE_KEY="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
+            --from-literal=JWT_SECRET="$JWT_SECRET" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Aguarda o Kong ficar pronto
+        run: |
+          kubectl -n kong rollout status deployment/ingress-kong --timeout=10m
+
+      - name: Aplica os manifests da aplicação (exceto o Job de seed)
+        run: |
+          kubectl apply \
+            -f devops/k8s/serviceaccount.yaml \
+            -f devops/k8s/configmap.yaml \
+            -f devops/k8s/service.yaml \
+            -f devops/k8s/deployment.yaml \
+            -f devops/k8s/hpa.yaml \
+            -f devops/k8s/ingress.yaml
+
+      - name: Define a tag da imagem a implantar
+        id: image
+        run: |
+          TAG="${{ github.event.client_payload.image_tag || inputs.image_tag || 'prod-latest' }}"
+          echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Atualiza a imagem do Deployment
+        run: |
+          kubectl -n ${{ env.NAMESPACE }} set image deployment/mecanicadm \
+            mecanicadm=${{ env.IMAGE_REPO }}:${{ steps.image.outputs.TAG }}
+
+      - name: Verifica o status do rollout
+        run: |
+          kubectl -n ${{ env.NAMESPACE }} rollout status deployment/mecanicadm --timeout=5m
+
+      - name: Cria o ConfigMap do seed
+        run: |
+          kubectl -n ${{ env.NAMESPACE }} create configmap mecanicadm-seed-sql \
+            --from-file=init.sql=devops/k8s/seed/init.sql \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Remove o Job de seed anterior (Jobs são imutáveis)
+        run: |
+          kubectl -n ${{ env.NAMESPACE }} delete job mecanicadm-seed \
+            --ignore-not-found --wait=true
+
+      - name: Executa o Job de seed
+        run: |
+          kubectl apply -f devops/k8s/seed-job.yaml
+          kubectl -n ${{ env.NAMESPACE }} wait \
+            --for=condition=complete job/mecanicadm-seed --timeout=10m
