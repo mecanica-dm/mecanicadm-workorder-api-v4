@@ -10,7 +10,7 @@ problemas: salvar no banco e publicar não são uma operação só (a OS muda, m
 chegar duas vezes (um command seria executado duas vezes). Também é preciso decidir quando confirmar (ack) uma mensagem
 e o que fazer quando o processamento falha.
 
-A arquitetura está em [arquitetura-da-mensageria.md](../arquitetura-da-mensageria.md) e a explicação didática, em [apoio/messaging-fluxo-completo.md](../apoio/messaging-fluxo-completo.md). Esta ADR registra as decisões.
+A arquitetura está em [arquitetura-da-mensageria.md](../apoio/arquitetura-da-mensageria.md). Esta ADR registra as decisões.
 
 ## 2. Decisão
 

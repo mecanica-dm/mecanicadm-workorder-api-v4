@@ -138,7 +138,7 @@ stateDiagram-v2
     CANCELED --> [*]
 ```
 
-O diagrama mostra os caminhos principais. A tabela completa de transições (evento, estado, command emitido e novo estado) está em `mecanicadm-saga-api-v4/docs/saga-fluxo.md`.
+O diagrama mostra os caminhos principais. A tabela completa de transições (evento, estado, command emitido e novo estado) está em `mecanicadm-saga-api-v4/docs/apoio/saga-fluxo.md`.
 
 ## Por que esta divisão
 

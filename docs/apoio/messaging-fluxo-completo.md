@@ -1,6 +1,6 @@
 # Mensageria da workorder-api: como funciona
 
-> **Material de apoio.** Explicação didática escrita durante o desenvolvimento; pode estar desatualizada em detalhes. A referência vigente é [arquitetura-da-mensageria.md](../arquitetura-da-mensageria.md), com os ADRs [012](../adr/012-evento_de_recusa_de_command.md) e [013](../adr/013-outbox_inbox_e_politica_de_ack.md).
+> **Material de apoio.** Explicação técnica escrita durante o desenvolvimento; pode estar desatualizada em detalhes. A referência é o [README](../../README.md), que descreve o que foi entregue; as decisões estão nos [ADRs](../adr/) e [RFCs](../rfc/).
 
 Este documento explica, do zero, como a workorder-api troca mensagens com os outros serviços pelo RabbitMQ. Ele não assume que você conhece Outbox, Inbox, ack ou exchanges. Os conceitos vêm primeiro, depois o fluxo e o mapa do código.
 
