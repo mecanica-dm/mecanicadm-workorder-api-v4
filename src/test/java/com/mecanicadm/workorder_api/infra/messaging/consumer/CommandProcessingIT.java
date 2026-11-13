@@ -32,7 +32,6 @@ import static org.mockito.Mockito.verify;
 @Sql("/sql/saga_messaging_test_data.sql")
 class CommandProcessingIT extends AbstractIntegrationTest {
     private static final UUID RECEIVED = UUID.fromString("770e8400-e29b-41d4-a716-446655440100");
-    private static final UUID IN_EXECUTION = UUID.fromString("770e8400-e29b-41d4-a716-446655440101");
     private static final UUID DIAGNOSED = UUID.fromString("770e8400-e29b-41d4-a716-446655440102");
 
     @Autowired
@@ -56,8 +55,12 @@ class CommandProcessingIT extends AbstractIntegrationTest {
     }
 
     private AuthorizeWorkOrderIntegrationCommand authorize(UUID workOrderId) {
+        return authorize(UUID.randomUUID(), workOrderId);
+    }
+
+    private AuthorizeWorkOrderIntegrationCommand authorize(UUID messageId, UUID workOrderId) {
         AuthorizeWorkOrderIntegrationCommand command = new AuthorizeWorkOrderIntegrationCommand(workOrderId);
-        messageIds.put(command, UUID.randomUUID());
+        messageIds.put(command, messageId);
         return command;
     }
 
@@ -122,16 +125,22 @@ class CommandProcessingIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Deve registrar REJECTED no inbox, manter o estado e nao gerar evento quando a regra de negocio recusar o command")
+    @DisplayName("Deve registrar REJECTED no inbox, manter o estado e emitir apenas o WorkOrderCommandRejectedEvent quando a regra de negocio recusar o command")
     void shouldRegisterRejectedWhenBusinessRuleFails() {
         UUID messageId = UUID.randomUUID();
 
-        ProcessingResult result = process(cancel(messageId, IN_EXECUTION), received -> cancelWorkOrderUseCase.execute(received.toCommand()));
+        ProcessingResult result = process(authorize(messageId, RECEIVED), received -> authorizeWorkOrderUseCase.execute(received.toCommand()));
 
         assertEquals(ProcessingResult.REJECTED, result);
-        assertEquals(0, status(IN_EXECUTION));
-        assertEquals(0, outbox(IN_EXECUTION).size());
+        List<Map<String, Object>> events = outbox(RECEIVED);
+        assertEquals(3, status(RECEIVED));
         assertEquals("REJECTED", inboxStatus(messageId));
+        assertEquals(1, events.size());
+        assertEquals("WorkOrderCommandRejectedEvent", events.get(0).get("type"));
+        String payload = (String) events.get(0).get("payload");
+        assertTrue(payload.contains(RECEIVED.toString()));
+        assertTrue(payload.contains("AuthorizeWorkOrderIntegrationCommand"));
+        assertTrue(payload.contains("InvalidStatusTransition"));
     }
 
     @Test
@@ -139,16 +148,17 @@ class CommandProcessingIT extends AbstractIntegrationTest {
     void shouldReprocessRejectedMessageWhenRedelivered() {
         UUID messageId = UUID.randomUUID();
 
-        ProcessingResult first = process(cancel(messageId, IN_EXECUTION), received -> cancelWorkOrderUseCase.execute(received.toCommand()));
-        jdbc.update("UPDATE work_orders SET status = 3 WHERE id = ?", IN_EXECUTION);
-        ProcessingResult second = process(cancel(messageId, IN_EXECUTION), received -> cancelWorkOrderUseCase.execute(received.toCommand()));
+        ProcessingResult first = process(authorize(messageId, RECEIVED), received -> authorizeWorkOrderUseCase.execute(received.toCommand()));
+        jdbc.update("UPDATE work_orders SET status = 2 WHERE id = ?", RECEIVED);
+        ProcessingResult second = process(authorize(messageId, RECEIVED), received -> authorizeWorkOrderUseCase.execute(received.toCommand()));
 
         assertEquals(ProcessingResult.REJECTED, first);
         assertEquals(ProcessingResult.PROCESSED, second);
-        assertEquals(8, status(IN_EXECUTION));
+        assertEquals(1, status(RECEIVED));
         assertEquals(1, inboxCount(messageId));
         assertEquals("PROCESSED", inboxStatus(messageId));
-        assertEquals(1, outbox(IN_EXECUTION).size());
+        assertEquals(List.of("WorkOrderCommandRejectedEvent", "WorkOrderAuthorizedEvent"),
+                outbox(RECEIVED).stream().map(event -> event.get("type")).toList());
     }
 
     @Test
@@ -238,15 +248,15 @@ class CommandProcessingIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Deve registrar no inbox e nao gerar evento quando a OS do command nao existe")
-    void shouldRegisterInboxAndEmitNothingWhenWorkOrderDoesNotExist() {
+    @DisplayName("Deve registrar no inbox e emitir o WorkOrderCommandRejectedEvent quando a OS do command nao existe")
+    void shouldRegisterInboxAndEmitRejectionWhenWorkOrderDoesNotExist() {
         UUID unknown = UUID.randomUUID();
         UUID messageId = UUID.randomUUID();
 
         ProcessingResult result = process(cancel(messageId, unknown), received -> cancelWorkOrderUseCase.execute(received.toCommand()));
 
         assertEquals(ProcessingResult.REJECTED, result);
-        assertEquals(0, outbox(unknown).size());
+        assertEquals(List.of("WorkOrderCommandRejectedEvent"), outbox(unknown).stream().map(event -> event.get("type")).toList());
         assertEquals(1, inboxCount(messageId));
     }
 }

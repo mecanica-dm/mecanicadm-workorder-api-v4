@@ -160,13 +160,13 @@ class WorkOrderConsumerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Deve registrar REJECTED no inbox, manter o estado e nao gerar evento quando a regra de negocio recusar")
+    @DisplayName("Deve registrar REJECTED no inbox, manter o estado e emitir o WorkOrderCommandRejectedEvent quando a regra de negocio recusar")
     void shouldRegisterRejectedWhenBusinessRuleRefusesCommand() {
-        send("CancelWorkOrderIntegrationCommand", command(IN_EXECUTION, ""));
+        send("AuthorizeWorkOrderIntegrationCommand", command(IN_EXECUTION, ""));
 
         await().atMost(Duration.ofSeconds(15)).until(() -> inboxStatuses(IN_EXECUTION).equals(List.of("REJECTED")));
         assertEquals(0, status(IN_EXECUTION));
-        assertEquals(List.of(), outboxTypes(IN_EXECUTION));
+        assertEquals(List.of("WorkOrderCommandRejectedEvent"), outboxTypes(IN_EXECUTION));
     }
 
     @Test
