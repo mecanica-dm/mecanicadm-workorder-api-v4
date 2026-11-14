@@ -1,5 +1,6 @@
 package com.mecanicadm.workorder_api.infra.messaging.consumer;
 
+import com.mecanicadm.workorder_api.core.workorder.domain.events.WorkOrderCommandRejectedEvent;
 import com.mecanicadm.workorder_api.infra.messaging.inbox.InboxStatus;
 import com.mecanicadm.workorder_api.shared.exception.DomainExceptionCore;
 import com.rabbitmq.client.Channel;
@@ -11,11 +12,13 @@ import org.springframework.amqp.core.MessageProperties;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 public abstract class MessageConsumer {
     private static final Logger log = LoggerFactory.getLogger(MessageConsumer.class);
+    private static final Locale REJECTION_LOCALE = Locale.of("pt", "BR");
 
     private final MessageConsumerSupport support;
 
@@ -76,8 +79,20 @@ public abstract class MessageConsumer {
         log.warn("Mensagem {} messageId={} workOrderId={} recusada: {}",
                 envelope.eventType(), envelope.messageId(), envelope.workOrderId(), rejection.getMessageKey());
 
-        return support.transactionTemplate().execute(status ->
-                registerInInbox(envelope, InboxStatus.REJECTED) ? ProcessingResult.REJECTED : ProcessingResult.DUPLICATE);
+        return support.transactionTemplate().execute(status -> {
+            if (!registerInInbox(envelope, InboxStatus.REJECTED)) {
+                return ProcessingResult.DUPLICATE;
+            }
+            support.publisher().publish(envelope.workOrderId(), rejectionEvent(envelope, rejection));
+            return ProcessingResult.REJECTED;
+        });
+    }
+
+    private WorkOrderCommandRejectedEvent rejectionEvent(Envelope envelope, DomainExceptionCore rejection) {
+        String message = support.messageSource().getMessage(
+                rejection.getMessageKey(), rejection.getArgs(), rejection.getMessageKey(), REJECTION_LOCALE);
+        return new WorkOrderCommandRejectedEvent(
+                envelope.workOrderId(), envelope.eventType(), rejection.getClass().getSimpleName(), message);
     }
 
     private boolean registerInInbox(Envelope envelope, InboxStatus status) {

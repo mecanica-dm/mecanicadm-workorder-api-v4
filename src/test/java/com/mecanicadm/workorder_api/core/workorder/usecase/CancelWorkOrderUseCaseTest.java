@@ -91,18 +91,16 @@ class CancelWorkOrderUseCaseTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"IN_EXECUTION", "EXECUTION_COMPLETED", "PAID", "DELIVERED"})
-    @DisplayName("Deve recusar o cancelamento a partir da execucao, sem publicar nem persistir")
-    void shouldRejectWhenExecutionAlreadyStarted(String step) {
+    @DisplayName("Deve cancelar a partir da execucao em diante, publicando o evento e persistindo")
+    void shouldCancelWhenExecutionAlreadyStarted(String step) {
         WorkOrder workOrder = workOrderIn(step);
         givenStored(gateway, workOrder);
-        WorkOrderStatus before = workOrder.getStatus();
 
-        assertThrows(WorkOrderExceptions.InvalidStatusTransition.class,
-                () -> useCase.execute(new CancelWorkOrderCommand(workOrder.getId())));
+        useCase.execute(new CancelWorkOrderCommand(workOrder.getId()));
 
-        assertEquals(before, workOrder.getStatus());
-        verify(publisher, never()).publish(ArgumentMatchers.any(), ArgumentMatchers.any());
-        verify(gateway, never()).update(any());
+        assertEquals(WorkOrderStatus.CANCELLED, workOrder.getStatus());
+        verify(publisher).publish(ArgumentMatchers.eq(workOrder.getId()), ArgumentMatchers.any(WorkOrderCanceledEvent.class));
+        verify(gateway).update(workOrder);
     }
 
     @Test

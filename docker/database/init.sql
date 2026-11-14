@@ -248,3 +248,28 @@ INSERT INTO stock_movements (id, material_id, work_order_id, quantity, type, dat
 ('88886688-cccc-4888-8888-8888888888cc', 'b3c1b691-8d2b-42ea-a4b5-ea93db622616', '88886688-8888-4888-8888-888888888888', 1, 'REDUCTION', now() - interval '1 day', now() - interval '1 day'),
 ('88886688-dddd-4888-8888-8888888888dd', '5c5450e1-236b-43d9-95a7-96a1a1f73b15', '88886688-8888-4888-8888-888888888888', 1, 'REDUCTION', now() - interval '1 day', now() - interval '1 day')
 ON CONFLICT DO NOTHING;
+
+-- =========================================
+-- 5. HISTÓRICO DE STATUS DAS OS DO SEED
+-- =========================================
+-- As OS acima entram direto na tabela, sem passar pela aplicação, então ganham uma linha inicial no histórico
+-- com o status atual (work_orders.status é o ordinal do enum WorkOrderStatus). É idempotente.
+INSERT INTO work_order_status_history (work_order_id, from_status, to_status, reason, changed_by, changed_at)
+SELECT wo.id,
+       NULL,
+       CASE wo.status
+           WHEN 0 THEN 'IN_EXECUTION'
+           WHEN 1 THEN 'AWAITING_EXECUTION'
+           WHEN 2 THEN 'DIAGNOSED'
+           WHEN 3 THEN 'RECEIVED'
+           WHEN 4 THEN 'EXECUTION_COMPLETED'
+           WHEN 5 THEN 'PAID'
+           WHEN 6 THEN 'DELIVERED'
+           WHEN 7 THEN 'CHANGES_REQUESTED'
+           ELSE 'CANCELLED'
+       END,
+       'Histórico iniciado no seed',
+       'seed',
+       COALESCE(wo.date_updated, wo.date_created)
+FROM work_orders wo
+WHERE NOT EXISTS (SELECT 1 FROM work_order_status_history h WHERE h.work_order_id = wo.id);

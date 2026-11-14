@@ -16,3 +16,11 @@ data:
   MAIL_SMTP_STARTTLS: "true"
 
   BUDGET_BASE_URL: "https://api.mecanicadm.com.br/api"
+
+  # Broker gerenciado no CloudAMQP, compartilhado com o finance. Host e porta
+  # nao sao segredo; as credenciais (RABBITMQ_USER, RABBITMQ_PASSWORD e
+  # RABBITMQ_VHOST) chegam pelo Secret "mecanicadm-secrets", criado pela
+  # pipeline a partir do SSM em /mecanicadm/prod/rabbitmq.
+  RABBITMQ_HOST: "moose.rmq.cloudamqp.com"
+  RABBITMQ_PORT: "5671"
+  RABBITMQ_SSL_ENABLED: "true"

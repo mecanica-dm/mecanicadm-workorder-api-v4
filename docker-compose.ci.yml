@@ -1,4 +1,38 @@
 services:
+  # No CI o broker sobe sempre (sem perfil) e sem publicar portas no host.
+  rabbitmq:
+    profiles: !reset []
+    ports: !reset []
+    image: rabbitmq:3.13-management-alpine
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq-init:
+    profiles: !reset []
+    image: curlimages/curl:8.10.1
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./messaging/workorder-definitions.json:/definitions.json:ro
+    entrypoint: [ "sh", "-c" ]
+    command:
+      - >
+        curl -sf --retry 10 --retry-delay 3 --retry-connrefused
+        -u "guest:guest"
+        -H "content-type: application/json"
+        -X POST http://rabbitmq:15672/api/definitions
+        --data @/definitions.json
+    restart: "no"
+
   api:
     image: mecanicadm-workorder-api:ci
     pull_policy: never
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      rabbitmq-init:
+        condition: service_completed_successfully

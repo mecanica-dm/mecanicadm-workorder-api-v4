@@ -202,14 +202,14 @@ Ao iniciar uma feature nova, seguir este checklist:
 
 Esta ADR complementa e reforça:
 
-- [ADR 003 - Lógica de Negócio no Domínio](docs/adr/003-logica_negocio_dominio.md)
-- [ADR 004 - Padrão de Exceções Modulares](docs/adr/004-padrao_excecoes_modulares.md)
-- [ADR 006 - Contrato de Exceções de Domínio e i18n](docs/adr/006-contrato_excecoes_dominio_i18n.md)
-- [ADR 010 - Estratégia de i18n e Múltiplos Idiomas](docs/adr/010-estrategia_i18n_multi_idioma.md)
+- [ADR 003 - Lógica de Negócio no Domínio](003-logica_negocio_dominio.md)
+- [ADR 004 - Padrão de Exceções Modulares](004-padrao_excecoes_modulares.md)
+- [ADR 006 - Contrato de Exceções de Domínio e i18n](006-contrato_excecoes_dominio_i18n.md)
+- [ADR 010 - Estratégia de i18n e Múltiplos Idiomas](010-estrategia_i18n_multi_idioma.md)
 
 Substitui:
 
-- [ADR 002 - Padrão de UseCases e Commands](docs/adr/002-padrao_usecases_commands.md)
-- [ADR 005 - Estratégia de Soft Delete e Auditoria](docs/adr/005-estrategia_soft_delete_auditoria.md)
+- [ADR 002 - Padrão de UseCases e Commands](002-padrao_usecases_commands.md)
+- [ADR 005 - Estratégia de Soft Delete e Auditoria](005-estrategia_soft_delete_auditoria.md)
 
 

@@ -5,6 +5,9 @@ on:
     branches: [ main ]
     paths:
       - "devops/k8s/**"
+      # Mudanças na topologia do broker também passam pelo deploy, que aplica
+      # o definitions.json no CloudAMQP.
+      - "messaging/**"
       - ".github/workflows/app-deploy.yml"
   repository_dispatch:
     types: [ app-image-published ]
@@ -26,6 +29,10 @@ concurrency:
 env:
   ENVIRONMENT: prod
   NAMESPACE: mecanicadm
+  # Credenciais do broker CloudAMQP, compartilhadas com o finance-api no SSM.
+  # Publicamos apenas o que ainda nao existe (o finance sobrescreve a cada
+  # deploy dele), para o workorder nao depender da ordem dos deploys.
+  SSM_RABBITMQ_PREFIX: /mecanicadm/prod/rabbitmq
   IMAGE_REPO: ${{ secrets.DOCKER_IMAGE || 'diegopriess/mecanica-dm' }}
 
 jobs:
@@ -85,14 +92,64 @@ jobs:
             --from-literal=DB_PASSWORD="$DB_PASSWORD" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      # O broker e o vhost sao compartilhados com o finance-api, que publica as
+      # mesmas credenciais com --overwrite. Criamos aqui apenas os parametros
+      # ausentes: assim o deploy do workorder funciona sozinho na primeira vez
+      # e nao rotaciona credenciais que o finance ja publicou.
+      - name: Publica as credenciais do RabbitMQ no SSM (se ausentes)
+        env:
+          RABBITMQ_USER: ${{ secrets.CLOUDAMQP_USER }}
+          RABBITMQ_PASSWORD: ${{ secrets.CLOUDAMQP_PASSWORD }}
+          RABBITMQ_VHOST: ${{ secrets.CLOUDAMQP_VHOST }}
+        run: |
+          set -euo pipefail
+
+          publish_if_missing() {
+            local name="$1" value="$2"
+
+            if aws ssm get-parameter --name "$name" >/dev/null 2>&1; then
+              echo "Parâmetro $name já existe; mantendo o valor atual."
+              return
+            fi
+
+            if [ -z "$value" ]; then
+              echo "::error::Parâmetro $name não existe e a credencial correspondente não foi configurada nos GitHub Secrets CLOUDAMQP_*."
+              exit 1
+            fi
+
+            # Se outra pipeline (finance) criar o parâmetro ao mesmo tempo, o
+            # put falha com ParameterAlreadyExists; nesse caso o valor dela vale.
+            if ! output="$(aws ssm put-parameter --name "$name" --type SecureString --value "$value" 2>&1)"; then
+              if aws ssm get-parameter --name "$name" >/dev/null 2>&1; then
+                echo "Parâmetro $name criado por outra execução; mantendo o valor atual."
+                return
+              fi
+              echo "::error::Falha ao publicar o parâmetro $name: $output"
+              exit 1
+            fi
+
+            echo "Parâmetro $name criado."
+          }
+
+          publish_if_missing "$SSM_RABBITMQ_PREFIX/user" "$RABBITMQ_USER"
+          publish_if_missing "$SSM_RABBITMQ_PREFIX/password" "$RABBITMQ_PASSWORD"
+          publish_if_missing "$SSM_RABBITMQ_PREFIX/vhost" "$RABBITMQ_VHOST"
+
       - name: Cria o Secret da aplicação
         env:
           JWT_SECRET_PARAM: /mecanicadm/prod/jwt_secret
         run: |
           set -euo pipefail
 
-          JWT_SECRET="$(aws ssm get-parameter --name "$JWT_SECRET_PARAM" \
-            --with-decryption --query Parameter.Value --output text)"
+          ssm() {
+            aws ssm get-parameter --name "$1" --with-decryption \
+              --query Parameter.Value --output text
+          }
+
+          JWT_SECRET="$(ssm "$JWT_SECRET_PARAM")"
+          RABBITMQ_USER="$(ssm "$SSM_RABBITMQ_PREFIX/user")"
+          RABBITMQ_PASSWORD="$(ssm "$SSM_RABBITMQ_PREFIX/password")"
+          RABBITMQ_VHOST="$(ssm "$SSM_RABBITMQ_PREFIX/vhost")"
 
           kubectl create secret generic mecanicadm-secrets \
             --namespace ${{ env.NAMESPACE }} \
@@ -100,6 +157,9 @@ jobs:
             --from-literal=MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}" \
             --from-literal=NEW_RELIC_LICENSE_KEY="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
             --from-literal=JWT_SECRET="$JWT_SECRET" \
+            --from-literal=RABBITMQ_USER="$RABBITMQ_USER" \
+            --from-literal=RABBITMQ_PASSWORD="$RABBITMQ_PASSWORD" \
+            --from-literal=RABBITMQ_VHOST="$RABBITMQ_VHOST" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Aguarda o Kong ficar pronto
@@ -122,14 +182,54 @@ jobs:
           TAG="${{ github.event.client_payload.image_tag || inputs.image_tag || 'prod-latest' }}"
           echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
 
+      # A aplicação não declara a topologia em runtime: sem a fila "workorder"
+      # o listener fica em retry. Aplicamos o workorder-definitions.json no
+      # vhost do CloudAMQP a cada deploy.
+      #
+      # Não usamos `POST /api/definitions`: o import exige a tag "administrator"
+      # e o plano compartilhado do CloudAMQP só entrega "management"/
+      # "policymaker" (definitions é documentado como exclusivo de instâncias
+      # dedicadas). O script aplica recurso por recurso, que usa apenas as
+      # permissões normais de vhost, é idempotente e não remove os recursos do
+      # finance, que compartilha o mesmo vhost.
+      - name: Aplica a topologia do RabbitMQ (CloudAMQP)
+        run: |
+          set -euo pipefail
+
+          ssm() {
+            aws ssm get-parameter --name "$1" --with-decryption \
+              --query Parameter.Value --output text
+          }
+
+          # O host vem do ConfigMap aplicado no passo anterior (fonte única).
+          RABBITMQ_HOST="$(kubectl -n ${{ env.NAMESPACE }} get configmap mecanicadm-config \
+            -o jsonpath='{.data.RABBITMQ_HOST}')"
+          if [ -z "$RABBITMQ_HOST" ]; then
+            echo "::error::RABBITMQ_HOST não encontrado no ConfigMap mecanicadm-config."
+            exit 1
+          fi
+          RABBITMQ_USER="$(ssm "$SSM_RABBITMQ_PREFIX/user")"
+          RABBITMQ_PASSWORD="$(ssm "$SSM_RABBITMQ_PREFIX/password")"
+          RABBITMQ_VHOST="$(ssm "$SSM_RABBITMQ_PREFIX/vhost")"
+          export RABBITMQ_HOST RABBITMQ_USER RABBITMQ_PASSWORD RABBITMQ_VHOST
+
+          bash devops/scripts/rabbitmq-apply-topology.sh messaging/workorder-definitions.json
+
       - name: Atualiza a imagem do Deployment
         run: |
           kubectl -n ${{ env.NAMESPACE }} set image deployment/mecanicadm \
             mecanicadm=${{ env.IMAGE_REPO }}:${{ steps.image.outputs.TAG }}
 
+      # ConfigMap/Secret não reiniciam pods sozinhos e, quando a tag não muda,
+      # o `set image` também não gera rollout. Reinicia explicitamente para as
+      # variáveis RABBITMQ_* chegarem aos containers.
+      - name: Reinicia o Deployment para aplicar ConfigMap e Secrets
+        run: |
+          kubectl -n ${{ env.NAMESPACE }} rollout restart deployment/mecanicadm
+
       - name: Verifica o status do rollout
         run: |
-          kubectl -n ${{ env.NAMESPACE }} rollout status deployment/mecanicadm --timeout=5m
+          kubectl -n ${{ env.NAMESPACE }} rollout status deployment/mecanicadm --timeout=10m
 
       - name: Cria o ConfigMap do seed
         run: |

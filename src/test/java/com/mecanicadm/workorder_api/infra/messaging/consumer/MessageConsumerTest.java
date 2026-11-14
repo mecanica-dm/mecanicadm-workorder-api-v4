@@ -1,5 +1,7 @@
 package com.mecanicadm.workorder_api.infra.messaging.consumer;
 
+import com.mecanicadm.workorder_api.core.shared.messaging.MessagePublisher;
+import com.mecanicadm.workorder_api.core.workorder.domain.events.WorkOrderCommandRejectedEvent;
 import com.mecanicadm.workorder_api.core.workorder.exception.WorkOrderExceptions;
 import com.mecanicadm.workorder_api.infra.features.workorder.amqp.command.CancelWorkOrderIntegrationCommand;
 import com.mecanicadm.workorder_api.infra.messaging.inbox.InboxJpaRepository;
@@ -7,8 +9,10 @@ import com.rabbitmq.client.Channel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
+import org.springframework.context.MessageSource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -33,6 +37,8 @@ class MessageConsumerTest {
 
     private final Channel channel = mock(Channel.class);
     private final InboxJpaRepository inbox = mock(InboxJpaRepository.class);
+    private final MessagePublisher publisher = mock(MessagePublisher.class);
+    private final MessageSource messageSource = mock(MessageSource.class);
     private final MessageConsumerSupport support = mock(MessageConsumerSupport.class);
     private final MessageConsumer consumer = new MessageConsumer(support) {
     };
@@ -41,6 +47,8 @@ class MessageConsumerTest {
     void setUp() {
         when(support.transactionTemplate()).thenReturn(new TransactionTemplate(mock(PlatformTransactionManager.class)));
         when(support.inbox()).thenReturn(inbox);
+        when(support.publisher()).thenReturn(publisher);
+        when(support.messageSource()).thenReturn(messageSource);
         when(inbox.register(any(), anyString(), any(), anyString(), any())).thenReturn(1);
     }
 
@@ -121,6 +129,36 @@ class MessageConsumerTest {
         verify(inbox, times(2)).register(eq(messageId), eq("CancelWorkOrderIntegrationCommand"), eq(command.workOrderId()), anyString(), any());
         verify(inbox).register(eq(messageId), anyString(), any(), eq("REJECTED"), any());
         verifyAckedOnly();
+    }
+
+    @Test
+    @DisplayName("Deve publicar o WorkOrderCommandRejectedEvent com command, excecao e motivo quando a regra de negocio recusar a mensagem")
+    void shouldPublishRejectionEventWhenBusinessRuleFails() throws IOException {
+        CancelWorkOrderIntegrationCommand command = command();
+        when(messageSource.getMessage(eq("work.order.status.transition.invalid"), any(), anyString(), any()))
+                .thenReturn("Transicao invalida");
+
+        consume(command, message -> {
+            throw new WorkOrderExceptions.InvalidStatusTransition("IN_EXECUTION", "CANCELLED");
+        });
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(publisher).publish(eq(command.workOrderId()), captor.capture());
+        assertEquals(new WorkOrderCommandRejectedEvent(command.workOrderId(), "CancelWorkOrderIntegrationCommand",
+                "InvalidStatusTransition", "Transicao invalida"), captor.getValue());
+    }
+
+    @Test
+    @DisplayName("Nao deve publicar o WorkOrderCommandRejectedEvent quando a mensagem recusada for duplicata")
+    void shouldNotPublishRejectionEventWhenRejectedMessageIsDuplicate() throws IOException {
+        when(inbox.register(any(), anyString(), any(), eq("PROCESSED"), any())).thenReturn(1);
+        when(inbox.register(any(), anyString(), any(), eq("REJECTED"), any())).thenReturn(0);
+
+        consume(command(), message -> {
+            throw new WorkOrderExceptions.NotFound();
+        });
+
+        verify(publisher, never()).publish(any(), any());
     }
 
     @Test

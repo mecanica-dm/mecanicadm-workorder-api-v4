@@ -22,10 +22,19 @@ nenhum CIDR liberado por padrão.
 
 ## O que **não** é criado aqui
 
-- **RabbitMQ**: o serviço depende de um broker, mas ele não existe no
-  `mecanicadm-infra-v4` nem neste state. A criação foi deixada para uma decisão
-  separada (Amazon MQ ou RabbitMQ no EKS), porque envolve custo e porque o app
-  precisaria passar a usar TLS na porta 5671 caso seja Amazon MQ.
+- **RabbitMQ**: o broker é gerenciado no CloudAMQP (plano compartilhado Little
+  Lemur) e **não** é criado por este state. As credenciais ficam no SSM em
+  `/mecanicadm/prod/rabbitmq/{user,password,vhost}` — publicadas pelas pipelines
+  de deploy (finance-api e workorder) a partir dos GitHub Secrets
+  `CLOUDAMQP_*` — e são materializadas no Secret `mecanicadm-secrets`. A
+  pipeline do workorder cria somente os parâmetros ausentes; o finance
+  sobrescreve os existentes a cada deploy dele. O host e a porta (`5671`, TLS)
+  ficam no ConfigMap. A topologia de `messaging/workorder-definitions.json` é
+  importada **automaticamente** pelo `app-deploy.yml` no vhost do CloudAMQP a
+  cada deploy (o `"vhost": "/"` do arquivo é substituído pelo vhost real). A
+  importação é idempotente: reexecutar não duplica exchanges, filas nem
+  bindings, e um erro na importação falha o deploy em vez de deixar o listener
+  em retry.
 - **Namespace, Ingress, Kong, Route 53, HPA, image pull**: pertencem ao
   `mecanicadm-infra-v4` e aos manifests em `devops/k8s`.
 - **Segredos de e-mail e New Relic**: continuam vindo dos GitHub Secrets do
@@ -109,8 +118,15 @@ diretamente a partir do SSM, na seguinte ordem:
 
 - `mecanicadm-db-secrets`: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` e
   `DB_PASSWORD`, lidos de `/mecanicadm/prod/workorder/*`.
-- `mecanicadm-secrets`: credenciais de e-mail, New Relic (GitHub Secrets) e
-  `JWT_SECRET`, lido de `/mecanicadm/prod/jwt_secret`.
+- `mecanicadm-secrets`: credenciais de e-mail, New Relic (GitHub Secrets),
+  `JWT_SECRET`, lido de `/mecanicadm/prod/jwt_secret`, e as credenciais do
+  CloudAMQP (`RABBITMQ_USER`, `RABBITMQ_PASSWORD` e `RABBITMQ_VHOST`), lidas de
+  `/mecanicadm/prod/rabbitmq/*`. Antes de montar o Secret, a pipeline publica
+  nesse prefixo os parâmetros que ainda não existirem, usando os GitHub Secrets
+  `CLOUDAMQP_USER`, `CLOUDAMQP_PASSWORD` e `CLOUDAMQP_VHOST` deste repositório
+  — ou seja, não depende de o finance-api ter feito deploy antes. Se os
+  parâmetros já existirem, os valores atuais são mantidos (o finance os
+  sobrescreve no deploy dele).
 
 Os comandos equivalentes para depuração manual são:
 
@@ -121,10 +137,14 @@ DB_NAME=$(aws ssm get-parameter --name /mecanicadm/prod/workorder/db_name --quer
 DB_USER=$(aws ssm get-parameter --name /mecanicadm/prod/workorder/db_user --with-decryption --query Parameter.Value --output text)
 DB_PASSWORD=$(aws ssm get-parameter --name /mecanicadm/prod/workorder/db_password --with-decryption --query Parameter.Value --output text)
 JWT_SECRET=$(aws ssm get-parameter --name /mecanicadm/prod/jwt_secret --with-decryption --query Parameter.Value --output text)
+RABBITMQ_USER=$(aws ssm get-parameter --name /mecanicadm/prod/rabbitmq/user --with-decryption --query Parameter.Value --output text)
+RABBITMQ_PASSWORD=$(aws ssm get-parameter --name /mecanicadm/prod/rabbitmq/password --with-decryption --query Parameter.Value --output text)
+RABBITMQ_VHOST=$(aws ssm get-parameter --name /mecanicadm/prod/rabbitmq/vhost --with-decryption --query Parameter.Value --output text)
 ```
 
-Os valores precisam bater com o que a aplicação espera
-(`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`).
+Os valores precisam bater com o que a aplicação espera (`DB_HOST`, `DB_PORT`,
+`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `RABBITMQ_USER`,
+`RABBITMQ_PASSWORD` e `RABBITMQ_VHOST`).
 
 > `devops/k8s/secret.example.yaml` é apenas referência: não é aplicado pela
 > pipeline e não deve ser usado no deploy real. O Secret real é criado pelo
@@ -161,7 +181,12 @@ A validação exige pelo menos 2 subnets em AZs diferentes.
 
 ## Próximos passos sugeridos
 
-1. Decidir e provisionar o RabbitMQ (Amazon MQ com TLS em 5671 ou RabbitMQ no
-   EKS) e publicar host/porta/credenciais no SSM.
-2. Aplicar a topologia de exchanges/filas de `messaging/workorder-definitions.json`
-   no broker escolhido.
+1. A topologia de `messaging/workorder-definitions.json` é importada a cada
+   deploy pelo step "Importa a topologia do RabbitMQ (CloudAMQP)". Para
+   aplicar manualmente (ou fora da pipeline), troque os `"vhost": "/"` pelo
+   vhost real da instância e use
+   `POST https://<host>/api/definitions` ou a Management UI (`https://<host>/`).
+2. Se as credenciais do broker mudarem, atualize os GitHub Secrets
+   `CLOUDAMQP_USER`, `CLOUDAMQP_PASSWORD` e `CLOUDAMQP_VHOST` no repositório do
+   finance-api e rode o deploy dele (ele sobrescreve os parâmetros no SSM).
+   Esta pipeline lê os valores publicados e reinicia o Deployment.
