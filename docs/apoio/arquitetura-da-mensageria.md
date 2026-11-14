@@ -58,7 +58,7 @@ topologia). A definição **conjunta dos três serviços** está em `messaging/r
 | `workorder-input` | Recebe os commands da saga (via bind `saga-output` → `workorder-input`) |
 | fila `workorder` | Uma fila, com um bind por command; um único consumer (`concurrency=1`) |
 | `workorder.dlq` | DLQ da fila, ligada a `mecanicadm.dlx` |
-| `workorder-output` | Recebe os eventos da Workorder e os entrega à fila `saga.workorder-events` |
+| `workorder-output` | Recebe os eventos da Workorder e os repassa à `saga-input` (entrada da saga), que os entrega à fila `saga.workorder-events` |
 
 ## 5. Mensagens
 
