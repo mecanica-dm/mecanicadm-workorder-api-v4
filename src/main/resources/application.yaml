@@ -31,7 +31,7 @@ server:
     context-path: /api
   error:
     include-stacktrace: never
-  port: 8081
+  port: 8080
 
 api:
   security:
