@@ -65,7 +65,7 @@ public class WorkOrder extends AuditDomain {
     public static WorkOrder create(UUID clientId, String vehicleId, String description) {
         WorkOrder workOrder = new WorkOrder(UUID.randomUUID(), clientId, vehicleId, description, WorkOrderStatus.RECEIVED);
         workOrder.create();
-        workOrder.pendingStatusChanges.add(new WorkOrderStatusChange(null, WorkOrderStatus.RECEIVED, null, null, LocalDateTime.now()));
+        workOrder.pendingStatusChanges.add(new WorkOrderStatusChange(null, WorkOrderStatus.RECEIVED, null, null, LocalDateTime.now(Clock.systemDefaultZone())));
         log.info("{\"message\": \"OS Criada\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", workOrder.getId(), workOrder.getStatus());
         return workOrder;
     }
@@ -112,7 +112,7 @@ public class WorkOrder extends AuditDomain {
         if (this.status == newStatus) {
             return;
         }
-        pendingStatusChanges.add(new WorkOrderStatusChange(this.status, newStatus, reason, null, LocalDateTime.now()));
+        pendingStatusChanges.add(new WorkOrderStatusChange(this.status, newStatus, reason, null, LocalDateTime.now(Clock.systemDefaultZone())));
         this.status = newStatus;
     }
 
