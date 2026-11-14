@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -42,6 +44,8 @@ public class WorkOrder extends AuditDomain {
 
     private String requestedChanges;
 
+    private final List<WorkOrderStatusChange> pendingStatusChanges = new ArrayList<>();
+
     private WorkOrder(UUID id, UUID clientId, String vehicleId, String description, WorkOrderStatus status) {
         this.id = id;
         this.clientId = clientId;
@@ -61,6 +65,7 @@ public class WorkOrder extends AuditDomain {
     public static WorkOrder create(UUID clientId, String vehicleId, String description) {
         WorkOrder workOrder = new WorkOrder(UUID.randomUUID(), clientId, vehicleId, description, WorkOrderStatus.RECEIVED);
         workOrder.create();
+        workOrder.pendingStatusChanges.add(new WorkOrderStatusChange(null, WorkOrderStatus.RECEIVED, null, null, LocalDateTime.now()));
         log.info("{\"message\": \"OS Criada\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", workOrder.getId(), workOrder.getStatus());
         return workOrder;
     }
@@ -103,6 +108,20 @@ public class WorkOrder extends AuditDomain {
         validate();
     }
 
+    private void changeStatus(WorkOrderStatus newStatus, String reason) {
+        if (this.status == newStatus) {
+            return;
+        }
+        pendingStatusChanges.add(new WorkOrderStatusChange(this.status, newStatus, reason, null, LocalDateTime.now()));
+        this.status = newStatus;
+    }
+
+    public List<WorkOrderStatusChange> pullStatusChanges() {
+        List<WorkOrderStatusChange> changes = List.copyOf(pendingStatusChanges);
+        pendingStatusChanges.clear();
+        return changes;
+    }
+
     private void validate() {
         if (clientId == null) {
             throw new WorkOrderExceptions.ClientRequired();
@@ -116,7 +135,7 @@ public class WorkOrder extends AuditDomain {
         if (this.status != WorkOrderStatus.RECEIVED && this.status != WorkOrderStatus.CHANGES_REQUESTED) {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.DIAGNOSED.name());
         }
-        this.status = WorkOrderStatus.DIAGNOSED;
+        changeStatus(WorkOrderStatus.DIAGNOSED, null);
         log.info("{\"message\": \"OS Diagnosticada\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
 
@@ -124,7 +143,7 @@ public class WorkOrder extends AuditDomain {
         if (this.status != WorkOrderStatus.DIAGNOSED) {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.AWAITING_EXECUTION.name());
         }
-        this.status = WorkOrderStatus.AWAITING_EXECUTION;
+        changeStatus(WorkOrderStatus.AWAITING_EXECUTION, null);
         log.info("{\"message\": \"OS Autorizada para execução\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
 
@@ -135,7 +154,7 @@ public class WorkOrder extends AuditDomain {
         if (this.status != WorkOrderStatus.EXECUTION_COMPLETED) {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.PAID.name());
         }
-        this.status = WorkOrderStatus.PAID;
+        changeStatus(WorkOrderStatus.PAID, null);
         log.info("{\"message\": \"Pagamento confirmado, veículo liberado\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
 
@@ -153,7 +172,7 @@ public class WorkOrder extends AuditDomain {
         if (this.status != WorkOrderStatus.AWAITING_EXECUTION) {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.IN_EXECUTION.name());
         }
-        this.status = WorkOrderStatus.IN_EXECUTION;
+        changeStatus(WorkOrderStatus.IN_EXECUTION, null);
         this.executionStartAt = LocalDateTime.now(Clock.systemDefaultZone());
         log.info("{\"message\": \"OS Em execução\",  \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
@@ -179,7 +198,7 @@ public class WorkOrder extends AuditDomain {
             throw new WorkOrderExceptions.PendingLaborItems();
         }
 
-        this.status = WorkOrderStatus.EXECUTION_COMPLETED;
+        changeStatus(WorkOrderStatus.EXECUTION_COMPLETED, null);
         this.executionEndAt = LocalDateTime.now(Clock.systemDefaultZone());
         log.info("{\"message\": \"OS Finalizada\",  \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
@@ -188,14 +207,14 @@ public class WorkOrder extends AuditDomain {
         if (this.status != WorkOrderStatus.EXECUTION_COMPLETED) {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.PAID.name());
         }
-        this.status = WorkOrderStatus.PAID;
+        changeStatus(WorkOrderStatus.PAID, null);
     }
 
     public void markAsDelivered() {
         if (this.status != WorkOrderStatus.PAID) {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.DELIVERED.name());
         }
-        this.status = WorkOrderStatus.DELIVERED;
+        changeStatus(WorkOrderStatus.DELIVERED, null);
     }
 
     public Optional<WorkOrderLaborItem> findLaborItem(UUID laborItemId) {
@@ -208,19 +227,13 @@ public class WorkOrder extends AuditDomain {
         if (this.status == WorkOrderStatus.DELIVERED || this.status == WorkOrderStatus.CANCELLED) {
             throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.CHANGES_REQUESTED.name());
         }
-        this.status = WorkOrderStatus.CHANGES_REQUESTED;
+        changeStatus(WorkOrderStatus.CHANGES_REQUESTED, observation);
         this.requestedChanges = observation;
         log.info("{\"message\": \"Alterações solicitadas na OS\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
 
     public void cancel() {
-        if (this.status != WorkOrderStatus.RECEIVED
-                && this.status != WorkOrderStatus.DIAGNOSED
-                && this.status != WorkOrderStatus.CHANGES_REQUESTED
-                && this.status != WorkOrderStatus.AWAITING_EXECUTION) {
-            throw new WorkOrderExceptions.InvalidStatusTransition(this.status.name(), WorkOrderStatus.CANCELLED.name());
-        }
-        this.status = WorkOrderStatus.CANCELLED;
+        changeStatus(WorkOrderStatus.CANCELLED, null);
         log.info("{\"message\": \"OS Cancelada\", \"workOrderId\": \"{}\", \"status\": \"{}\"}", this.id, this.status);
     }
 

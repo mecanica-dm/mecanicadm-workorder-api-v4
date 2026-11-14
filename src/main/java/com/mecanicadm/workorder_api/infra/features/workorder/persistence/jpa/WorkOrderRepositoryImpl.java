@@ -2,6 +2,12 @@ package com.mecanicadm.workorder_api.infra.features.workorder.persistence.jpa;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mecanicadm.workorder_api.core.client.domain.Client;
+import com.mecanicadm.workorder_api.core.user.domain.User;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderDetails;
 import com.mecanicadm.workorder_api.core.workorder.domain.WorkOrder;
 import com.mecanicadm.workorder_api.core.workorder.domain.enums.WorkOrderStatus;
@@ -29,16 +35,43 @@ public class WorkOrderRepositoryImpl implements WorkOrderGateway {
     private final WorkOrderJpaRepository jpaRepository;
     private final WorkOrderLaborItemJpaRepository laborItemJpaRepository;
     private final WorkOrderMaterialItemJpaRepository materialItemJpaRepository;
+    private final WorkOrderStatusHistoryJpaRepository statusHistoryRepository;
     private final ObjectMapper objectMapper;
 
     public WorkOrderRepositoryImpl(WorkOrderJpaRepository jpaRepository,
                                    WorkOrderLaborItemJpaRepository laborItemJpaRepository,
                                    WorkOrderMaterialItemJpaRepository materialItemJpaRepository,
+                                   WorkOrderStatusHistoryJpaRepository statusHistoryRepository,
                                    ObjectMapper objectMapper) {
         this.jpaRepository = jpaRepository;
         this.laborItemJpaRepository = laborItemJpaRepository;
         this.materialItemJpaRepository = materialItemJpaRepository;
+        this.statusHistoryRepository = statusHistoryRepository;
         this.objectMapper = objectMapper;
+    }
+
+    private void saveStatusHistory(WorkOrder workOrder) {
+        String actor = currentActor();
+        workOrder.pullStatusChanges().forEach(change ->
+                statusHistoryRepository.save(WorkOrderStatusHistoryGatewayImpl.toEntity(workOrder.getId(), change.withChangedBy(actor))));
+    }
+
+    private String currentActor() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+            return "saga";
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User user) {
+            return user.getEmail();
+        }
+        if (principal instanceof UserDetails userDetails) {
+            return userDetails.getUsername();
+        }
+        if (principal instanceof Client client) {
+            return "cliente: " + client.getName();
+        }
+        return "saga";
     }
 
     @Override
@@ -48,6 +81,7 @@ public class WorkOrderRepositoryImpl implements WorkOrderGateway {
         }
         WorkOrderJpaEntity entity = WorkOrderJpaMapper.toEntity(workOrder);
         entity = jpaRepository.save(entity);
+        saveStatusHistory(workOrder);
         return WorkOrderJpaMapper.toDomainLight(entity);
     }
 
@@ -58,6 +92,7 @@ public class WorkOrderRepositoryImpl implements WorkOrderGateway {
         }
         WorkOrderJpaEntity entity = WorkOrderJpaMapper.toEntity(workOrder);
         entity = jpaRepository.save(entity);
+        saveStatusHistory(workOrder);
         return WorkOrderJpaMapper.toDomainLight(entity);
     }
 

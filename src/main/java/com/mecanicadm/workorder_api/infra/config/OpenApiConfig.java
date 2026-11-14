@@ -22,7 +22,7 @@ public class OpenApiConfig {
         final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
                 .info(new Info()
-                        .title("Mecânica DM API")
+                        .title("Mecânica DM Work Order API")
                         .version("0.0.1")
                         .description("API para o sistema de gestão de mecânicas"))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))

@@ -13,6 +13,7 @@ import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderLaborIte
 import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderMaterialItemGateway;
 import com.mecanicadm.workorder_api.core.workorder.usecase.*;
 import com.mecanicadm.workorder_api.infra.config.TransactionalProxy;
+import com.mecanicadm.workorder_api.core.workorder.domain.port.WorkOrderStatusHistoryGateway;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -43,6 +44,11 @@ public class WorkOrderConfiguration {
     @Bean
     public GetWorkOrderStatusUseCase getWorkOrderStatusUseCase(WorkOrderGateway gateway) {
         return new GetWorkOrderStatusUseCase(gateway);
+    }
+
+    @Bean
+    public GetWorkOrderHistoryUseCase getWorkOrderHistoryUseCase(WorkOrderGateway gateway, WorkOrderStatusHistoryGateway historyGateway) {
+        return new GetWorkOrderHistoryUseCase(gateway, historyGateway);
     }
 
     @Bean
