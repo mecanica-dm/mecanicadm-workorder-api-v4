@@ -50,7 +50,7 @@ class ConfigIT extends AbstractIntegrationTest {
     void shouldLoadOpenApiConfigAndExecuteCustomizer() {
         OpenAPI openAPI = context.getBean(OpenAPI.class);
         assertNotNull(openAPI);
-        assertEquals("Mecânica DM API", openAPI.getInfo().getTitle());
+        assertEquals("Mecânica DM Work Order API", openAPI.getInfo().getTitle());
         
         OperationCustomizer customizer = (OperationCustomizer) context.getBean("addAcceptLanguageHeader");
         assertNotNull(customizer);
