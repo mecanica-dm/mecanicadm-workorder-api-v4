@@ -29,12 +29,12 @@ nenhum CIDR liberado por padrão.
   `CLOUDAMQP_*` — e são materializadas no Secret `mecanicadm-secrets`. A
   pipeline do workorder cria somente os parâmetros ausentes; o finance
   sobrescreve os existentes a cada deploy dele. O host e a porta (`5671`, TLS)
-  ficam no ConfigMap. A topologia (`messaging/workorder-definitions.json`)
-  precisa ser importada no vhost do CloudAMQP antes do deploy: troque os
-  `"vhost": "/"` pelo vhost real da instância e importe via
-  `POST https://<host>/api/definitions` ou pela Management UI
-  (`https://<host>/`). A aplicação **não** declara a topologia em runtime — sem
-  a fila `workorder`, o listener fica em retry.
+  ficam no ConfigMap. A topologia de `messaging/workorder-definitions.json` é
+  importada **automaticamente** pelo `app-deploy.yml` no vhost do CloudAMQP a
+  cada deploy (o `"vhost": "/"` do arquivo é substituído pelo vhost real). A
+  importação é idempotente: reexecutar não duplica exchanges, filas nem
+  bindings, e um erro na importação falha o deploy em vez de deixar o listener
+  em retry.
 - **Namespace, Ingress, Kong, Route 53, HPA, image pull**: pertencem ao
   `mecanicadm-infra-v4` e aos manifests em `devops/k8s`.
 - **Segredos de e-mail e New Relic**: continuam vindo dos GitHub Secrets do
@@ -181,9 +181,11 @@ A validação exige pelo menos 2 subnets em AZs diferentes.
 
 ## Próximos passos sugeridos
 
-1. Importar a topologia de `messaging/workorder-definitions.json` no vhost do
-   CloudAMQP (trocando os `"vhost": "/"` pelo vhost real da instância). Sem ela
-   o listener não consome a fila `workorder`.
+1. A topologia de `messaging/workorder-definitions.json` é importada a cada
+   deploy pelo step "Importa a topologia do RabbitMQ (CloudAMQP)". Para
+   aplicar manualmente (ou fora da pipeline), troque os `"vhost": "/"` pelo
+   vhost real da instância e use
+   `POST https://<host>/api/definitions` ou a Management UI (`https://<host>/`).
 2. Se as credenciais do broker mudarem, atualize os GitHub Secrets
    `CLOUDAMQP_USER`, `CLOUDAMQP_PASSWORD` e `CLOUDAMQP_VHOST` no repositório do
    finance-api e rode o deploy dele (ele sobrescreve os parâmetros no SSM).

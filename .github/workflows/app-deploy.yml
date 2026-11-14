@@ -5,6 +5,9 @@ on:
     branches: [ main ]
     paths:
       - "devops/k8s/**"
+      # Mudanças na topologia do broker também passam pelo deploy, que importa
+      # o definitions.json no CloudAMQP.
+      - "messaging/**"
       - ".github/workflows/app-deploy.yml"
   repository_dispatch:
     types: [ app-image-published ]
@@ -178,6 +181,45 @@ jobs:
         run: |
           TAG="${{ github.event.client_payload.image_tag || inputs.image_tag || 'prod-latest' }}"
           echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
+
+      # A aplicação não declara a topologia em runtime: sem a fila "workorder"
+      # o listener fica em retry. Importamos o definitions.json no vhost do
+      # CloudAMQP a cada deploy. A importação é idempotente para os mesmos
+      # recursos, então rodar de novo não duplica exchanges, filas nem bindings.
+      - name: Importa a topologia do RabbitMQ (CloudAMQP)
+        run: |
+          set -euo pipefail
+
+          ssm() {
+            aws ssm get-parameter --name "$1" --with-decryption \
+              --query Parameter.Value --output text
+          }
+
+          # O host vem do ConfigMap aplicado no passo anterior (fonte única).
+          RABBITMQ_HOST="$(kubectl -n ${{ env.NAMESPACE }} get configmap mecanicadm-config \
+            -o jsonpath='{.data.RABBITMQ_HOST}')"
+          if [ -z "$RABBITMQ_HOST" ]; then
+            echo "::error::RABBITMQ_HOST não encontrado no ConfigMap mecanicadm-config."
+            exit 1
+          fi
+          RABBITMQ_USER="$(ssm "$SSM_RABBITMQ_PREFIX/user")"
+          RABBITMQ_PASSWORD="$(ssm "$SSM_RABBITMQ_PREFIX/password")"
+          RABBITMQ_VHOST="$(ssm "$SSM_RABBITMQ_PREFIX/vhost")"
+
+          # O definitions.json usa "vhost": "/" (ambiente local); no CloudAMQP
+          # o vhost é o da instância (planos compartilhados não usam "/").
+          DEFINITIONS="$(mktemp)"
+          jq --arg vhost "$RABBITMQ_VHOST" \
+            '(.exchanges[]?.vhost, .queues[]?.vhost, .bindings[]?.vhost) = $vhost' \
+            messaging/workorder-definitions.json > "$DEFINITIONS"
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-delay 5 --retry-connrefused --max-time 60 \
+            --user "${RABBITMQ_USER}:${RABBITMQ_PASSWORD}" \
+            -H "content-type: application/json" \
+            -X POST "https://${RABBITMQ_HOST}/api/definitions" \
+            --data "@${DEFINITIONS}"
+          echo "Topologia importada no vhost ${RABBITMQ_VHOST} de ${RABBITMQ_HOST}."
 
       - name: Atualiza a imagem do Deployment
         run: |
