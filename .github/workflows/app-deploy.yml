@@ -229,7 +229,7 @@ jobs:
 
       - name: Verifica o status do rollout
         run: |
-          kubectl -n ${{ env.NAMESPACE }} rollout status deployment/mecanicadm --timeout=5m
+          kubectl -n ${{ env.NAMESPACE }} rollout status deployment/mecanicadm --timeout=10m
 
       - name: Cria o ConfigMap do seed
         run: |
