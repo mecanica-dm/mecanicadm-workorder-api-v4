@@ -707,7 +707,7 @@ A lista completa de endpoints pode ser consultada no Swagger UI. Abaixo estão o
 
 ## ✅ Testes
 
-O projeto possui uma suíte de testes unitários e de integração (Testcontainers com PostgreSQL e RabbitMQ) para garantir a qualidade e a estabilidade do código.
+O projeto possui uma suíte de testes unitários, **testes BDD (Gherkin/Cucumber)** e de integração (Testcontainers com PostgreSQL e RabbitMQ) para garantir a qualidade e a estabilidade do código.
 
 Para executar todos os testes via Maven:
 ```bash
@@ -718,6 +718,17 @@ Os relatórios de cobertura de testes (Jacoco) são gerados em `target/site/jaco
 **Evidência de cobertura** (JaCoCo, `mvn verify`, 12/11/2026): **93,0% das linhas**, 93,4% das instruções e 80,7% dos branches, acima do mínimo de 80% do desafio. O CI publica o relatório no SonarCloud.
 
 A estratégia de testes (pirâmide, nomenclatura, padrão dos testes de integração) está nos ADRs 007, 008 e 009.
+
+### 🥒 Testes BDD (Gherkin)
+
+Os cenários ficam em `src/test/resources/features`, escritos em português (`# language: pt`), e rodam pela classe `CucumberWorkorderIT`, junto dos testes de integração (`mvn verify`, com Docker). Eles sobem o **contexto Spring completo com PostgreSQL (Testcontainers)** e exercitam os casos de uso reais da Workorder; os eventos que a saga receberia são lidos da tabela `outbox`. Os passos estão em `src/test/java/com/mecanicadm/workorder_api/bdd`. O relatório HTML fica em `target/cucumber-reports/cucumber.html`.
+
+| Feature | Cenários |
+|---|---|
+| `fluxo_completo_da_os.feature` | A OS percorre o fluxo da abertura à entrega do veículo, com a situação e o evento de cada passo; pedido de alterações do cliente, ajuste da OS, novo diagnóstico e autorização |
+| `cancelamento_e_regras.feature` | Cancelar avisa a saga uma única vez; OS cancelada não aceita nenhuma outra ação; não diagnostica sem mão de obra; não autoriza sem diagnóstico; não entrega antes do pagamento; OS entregue não aceita pedido de alterações |
+
+Para rodar só o BDD: `mvn verify -Dit.test=CucumberWorkorderIT -Dtest=NoSuchTest -Dsurefire.failIfNoSpecifiedTests=false`.
 
 ---
 
