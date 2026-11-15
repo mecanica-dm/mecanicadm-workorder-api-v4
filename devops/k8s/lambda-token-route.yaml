@@ -1,0 +1,50 @@
+# Roteia POST /lambda/token -> Lambda validate-cpf (HTTP API do API Gateway,
+# rota /token) via Kong. O prefixo /lambda é removido antes de encaminhar.
+#
+# Fluxo: Cliente -> Kong (api.mecanicadm.com.br) -> Ingress /lambda -> Service
+# ExternalName -> ovqq73zat3.execute-api.us-east-1.amazonaws.com/token
+#
+# API Gateway (HTTP API) da Lambda, ID "HttpApiId" da stack mecanicadm-lambda-v3-prod.
+# Se a stack for recriada, o ID muda e este arquivo precisa ser atualizado.
+apiVersion: v1
+kind: Service
+metadata:
+  name: lambda-validate-cpf
+  namespace: mecanicadm
+  labels:
+    app.kubernetes.io/name: lambda-validate-cpf
+    app.kubernetes.io/part-of: mecanicadm
+  annotations:
+    konghq.com/protocol: https
+spec:
+  type: ExternalName
+  externalName: ovqq73zat3.execute-api.us-east-1.amazonaws.com
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lambda-validate-cpf
+  namespace: mecanicadm
+  labels:
+    app.kubernetes.io/name: lambda-validate-cpf
+    app.kubernetes.io/part-of: mecanicadm
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  ingressClassName: kong
+  rules:
+    - host: "api.mecanicadm.com.br"
+      http:
+        paths:
+          - path: /lambda
+            pathType: Prefix
+            backend:
+              service:
+                name: lambda-validate-cpf
+                port:
+                  number: 443

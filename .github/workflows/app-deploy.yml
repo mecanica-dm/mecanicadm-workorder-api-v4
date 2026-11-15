@@ -174,7 +174,8 @@ jobs:
             -f devops/k8s/service.yaml \
             -f devops/k8s/deployment.yaml \
             -f devops/k8s/hpa.yaml \
-            -f devops/k8s/ingress.yaml
+            -f devops/k8s/ingress.yaml \
+            -f devops/k8s/lambda-token-route.yaml
 
       - name: Define a tag da imagem a implantar
         id: image
