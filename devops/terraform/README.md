@@ -46,6 +46,7 @@ nenhum CIDR liberado por padrão.
 2. Parâmetros SSM existentes:
    - `/mecanicadm/prod/vpc_id`
    - `/mecanicadm/prod/eks_node_sg_id`
+   - `/mecanicadm/prod/lambda_sg_id` (SG da Lambda validate-cpf, liberado no RDS)
 3. Bucket do state (`mecanicadm-v4-01`) e credenciais AWS com permissão para
    RDS, EC2 (SG), IAM, Secrets Manager e SSM.
 4. Terraform >= 1.10.
