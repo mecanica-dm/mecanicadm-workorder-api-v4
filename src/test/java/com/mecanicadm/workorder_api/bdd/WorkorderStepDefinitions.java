@@ -39,6 +39,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 
 import javax.sql.DataSource;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -244,7 +245,7 @@ public class WorkorderStepDefinitions {
 
     @Então("os eventos publicados, em ordem, são {string}")
     public void eventosEmOrdem(String expected) {
-        assertEquals(List.of(expected.split("\\s*,\\s*")), events());
+        assertEquals(Arrays.stream(expected.split(",")).map(String::trim).toList(), events());
     }
 
     @Então("a operação é recusada com {string}")
