@@ -7,6 +7,10 @@ data "aws_ssm_parameter" "eks_node_sg_id" {
   name = "/mecanicadm/${var.environment}/eks_node_sg_id"
 }
 
+data "aws_ssm_parameter" "lambda_sg_id" {
+  name = "/mecanicadm/${var.environment}/lambda_sg_id"
+}
+
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -51,6 +55,7 @@ locals {
 
   allowed_security_group_ids = distinct(concat(
     [data.aws_ssm_parameter.eks_node_sg_id.value],
+    [data.aws_ssm_parameter.lambda_sg_id.value],
     var.additional_allowed_security_group_ids,
   ))
 }
