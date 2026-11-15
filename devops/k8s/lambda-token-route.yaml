@@ -16,6 +16,7 @@ metadata:
     app.kubernetes.io/part-of: mecanicadm
   annotations:
     konghq.com/protocol: https
+    konghq.com/host-header: ovqq73zat3.execute-api.us-east-1.amazonaws.com
 spec:
   type: ExternalName
   externalName: ovqq73zat3.execute-api.us-east-1.amazonaws.com
@@ -35,6 +36,7 @@ metadata:
     app.kubernetes.io/part-of: mecanicadm
   annotations:
     konghq.com/strip-path: "true"
+    konghq.com/preserve-host: "false"
 spec:
   ingressClassName: kong
   rules:
