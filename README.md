@@ -94,52 +94,6 @@ flowchart LR
 
 </div>
 
-### Fluxo de CI/CD
-
-[Link para imagem do fluxo](docs/assets/fluxo-deploy-fase-03.png)
-
-<div align="center">
-
-```mermaid
-flowchart LR
-    TRIGGER[Disparo do Workflow] --> COND{Evento}
-    COND -->|push em main| M1[Branch: main]
-    COND -->|pull_request| PR[Pipeline PR]
-    COND -->|workflow_dispatch| WD[Manual]
-
-    M1 --> BUILD
-    PR --> BUILD
-    WD --> BUILD
-
-    subgraph BUILD[build-and-test]
-        direction LR
-        A1[Checkout]
-        A2[Setup JDK 21]
-        A3[mvn clean verify]
-        A4[Análise Sonar]
-        A1 --> A2 --> A3 --> A4
-    end
-
-    subgraph SEC[security-scan]
-        direction LR
-        S1[Checkout]
-        S2[Subir aplicação]
-        S3[ZAP Scan OpenAPI]
-        S4[Upload Relatório]
-        S5[Parar containers]
-        S1 --> S2 --> S3 --> S4 --> S5
-    end
-
-    BUILD -->|sucesso| SEC
-    SEC -.->|job publish-and-deploy, comentado no workflow| FIM[Publicação e deploy K8s]
-```
-
-</div>
-
-* build-and-test: Responsável por fazer o maven build, executar os testes unitários e de integração e a análise do Sonar.
-* security-scan: Rodamos o ZAP Scan para verificar problemas de segurança.
-* publish-and-deploy: O job que publica a imagem no Docker Hub e dispara o deploy no K8s está preparado no workflow, mas **comentado**.
-
 ### Diagrama de Entidade-Relacionamento
 
 ```mermaid
