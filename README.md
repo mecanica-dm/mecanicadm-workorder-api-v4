@@ -818,8 +818,6 @@ Os cenários ficam em `src/test/resources/features`, escritos em português (`# 
 
 Para rodar só o BDD: `mvn verify -Dit.test=CucumberWorkorderIT -Dtest=NoSuchTest -Dsurefire.failIfNoSpecifiedTests=false`.
 
----
-
 ## 📖 Documentação
 
 - [`docs/arquitetura-geral.md`](docs/arquitetura-geral.md): visão geral do sistema, com os diagramas.
