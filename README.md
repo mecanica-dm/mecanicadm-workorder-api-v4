@@ -827,3 +827,10 @@ Para rodar só o BDD: `mvn verify -Dit.test=CucumberWorkorderIT -Dtest=NoSuchTes
 - [`docs/adr`](docs/adr), [`docs/rfc`](docs/rfc): decisões de arquitetura.
 - [`docs/assets`](docs/assets): diagramas C4, ERD, sequência e fluxo de deploy (da Fase 03).
 - [`../mecanicadm-saga-api-v4/docs/apoio/saga-fluxo.md`](../mecanicadm-saga-api-v4/docs/apoio/saga-fluxo.md): o fluxo da saga e a topologia dos três serviços.
+
+## Repositórios relacionados
+
+- [mecanicadm-infra-v4](https://github.com/mecanica-dm/mecanicadm-infra-v4)
+- [mecanicadm-lambda-v4](https://github.com/mecanica-dm/mecanicadm-lambda-v4)
+- [mecanicadm-saga-api-v4](https://github.com/mecanica-dm/mecanicadm-saga-api-v4)
+- [mecanicadm-finance-api-v4](https://github.com/mecanica-dm/mecanicadm-finance-api-v4)
