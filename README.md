@@ -94,52 +94,6 @@ flowchart LR
 
 </div>
 
-### Fluxo de CI/CD
-
-[Link para imagem do fluxo](docs/assets/fluxo-deploy-fase-03.png)
-
-<div align="center">
-
-```mermaid
-flowchart LR
-    TRIGGER[Disparo do Workflow] --> COND{Evento}
-    COND -->|push em main| M1[Branch: main]
-    COND -->|pull_request| PR[Pipeline PR]
-    COND -->|workflow_dispatch| WD[Manual]
-
-    M1 --> BUILD
-    PR --> BUILD
-    WD --> BUILD
-
-    subgraph BUILD[build-and-test]
-        direction LR
-        A1[Checkout]
-        A2[Setup JDK 21]
-        A3[mvn clean verify]
-        A4[Análise Sonar]
-        A1 --> A2 --> A3 --> A4
-    end
-
-    subgraph SEC[security-scan]
-        direction LR
-        S1[Checkout]
-        S2[Subir aplicação]
-        S3[ZAP Scan OpenAPI]
-        S4[Upload Relatório]
-        S5[Parar containers]
-        S1 --> S2 --> S3 --> S4 --> S5
-    end
-
-    BUILD -->|sucesso| SEC
-    SEC -.->|job publish-and-deploy, comentado no workflow| FIM[Publicação e deploy K8s]
-```
-
-</div>
-
-* build-and-test: Responsável por fazer o maven build, executar os testes unitários e de integração e a análise do Sonar.
-* security-scan: Rodamos o ZAP Scan para verificar problemas de segurança.
-* publish-and-deploy: O job que publica a imagem no Docker Hub e dispara o deploy no K8s está preparado no workflow, mas **comentado**.
-
 ### Diagrama de Entidade-Relacionamento
 
 ```mermaid
@@ -505,6 +459,140 @@ Para habilitar o envio dos dados, configure a variável de ambiente **`NEW_RELIC
 
 ---
 
+## ⚙️ Pipelines (GitHub Actions)
+
+O repositório tem quatro workflows em `.github/workflows/`:
+
+| Workflow | Arquivo | Disparo | Ambiente |
+|---|---|---|---|
+| CI/CD - Work Order API | `ci-cd.yml` | push na `main`, pull request e manual | `prod` (só na publicação) |
+| Terraform - Workorder DB + Secrets | `terraform.yml` | push ou PR em `devops/terraform/**` e manual | `prod` |
+| Deploy Aplicação - Kubernetes | `app-deploy.yml` | push na `main` em `devops/k8s/**` ou `messaging/**`, `repository_dispatch`, manual e após o Terraform | `prod` |
+| DESTROY - Workorder DB + Secrets | `destroy.yml` | manual, com a confirmação `DESTRUIR` | `prod` |
+
+### CI/CD - Work Order API (`ci-cd.yml`)
+
+<div align="center">
+
+```mermaid
+flowchart LR
+    gatilho(["push na main, pull request ou workflow_dispatch"]) --> build
+
+    subgraph build["build-and-test"]
+        direction LR
+        b1["Checkout"] --> b2["Setup JDK 21"] --> b3["mvn clean verify"] --> b4["Análise Sonar"]
+    end
+
+    build --> sec
+
+    subgraph sec["security-scan (OWASP ZAP)"]
+        direction LR
+        s1["Checkout"] --> s2["Cria .env"] --> s3["Build da imagem CI"] --> s4["docker compose up"] --> s5["ZAP Scan OpenAPI"] --> s6["Upload do relatório"] --> s7["docker compose down"]
+    end
+
+    sec --> cond{"push ou workflow_dispatch na main?"}
+    cond -->|"não (PR ou outra branch)"| fim(["Fim"])
+    cond -->|"sim"| pub
+
+    subgraph pub["publish-and-deploy (environment prod)"]
+        direction LR
+        p1["Checkout"] --> p2["Login Docker Hub"] --> p3["Build e push da imagem"]
+    end
+```
+
+</div>
+
+* build-and-test: roda em qualquer disparo. Compila, executa os testes e envia a análise ao SonarCloud.
+* security-scan: depende do build. Sobe a aplicação com o compose de CI e executa o ZAP contra o OpenAPI.
+* publish-and-deploy: só roda na `main`, depois dos dois jobs anteriores. Publica a imagem no Docker Hub com as tags `prod-<sha>` e `prod-latest`.
+
+### Terraform - Workorder DB + Secrets (`terraform.yml`)
+
+<div align="center">
+
+```mermaid
+flowchart LR
+    gatilho(["push ou PR em devops/terraform, ou workflow_dispatch"]) --> bucket
+
+    subgraph tf["job terraform (devops/terraform, environment prod)"]
+        direction LR
+        bucket["Garante o bucket do state (cria se faltar, fora de PR; versionamento e KMS)"] --> init["terraform init (backend S3 com use_lockfile)"]
+        init --> fmt["terraform fmt -check"]
+        fmt --> validate["terraform validate"]
+        validate --> plan["terraform plan -out=tfplan-prod"]
+        plan --> cond{"push ou workflow_dispatch na main?"}
+        cond -->|"não (PR)"| fim(["Só valida e planeja"])
+        cond -->|"sim"| apply["terraform apply tfplan-prod"]
+        apply --> outputs["terraform output"]
+    end
+```
+
+</div>
+
+* O concurrency `terraform-workorder-prod` impede dois applies simultâneos. O mesmo grupo é usado pelo destroy.
+* O apply publica no SSM Parameter Store os parâmetros e secrets (`/mecanicadm/prod/workorder/*`, `/mecanicadm/prod/jwt_secret`) que o deploy consome.
+
+### Deploy Aplicação - Kubernetes (`app-deploy.yml`)
+
+<div align="center">
+
+```mermaid
+flowchart LR
+    t1(["push na main em devops/k8s, messaging/ ou no próprio workflow"])
+    t2(["repository_dispatch: app-image-published"])
+    t3(["workflow_dispatch com image_tag opcional"])
+    t4(["workflow_run: Terraform concluído com sucesso"])
+
+    t1 --> deploy
+    t2 --> deploy
+    t3 --> deploy
+    t4 --> deploy
+
+    subgraph deploy["job deploy (environment prod)"]
+        direction LR
+        d1["Credenciais AWS e kubeconfig do EKS"] --> d2["Garante o namespace mecanicadm"]
+        d2 --> d3["Secret do banco a partir do SSM"]
+        d3 --> d4["Publica credenciais do RabbitMQ no SSM (se ausentes)"]
+        d4 --> d5["Secret da aplicação (JWT, RabbitMQ, SMTP, New Relic)"]
+        d5 --> d6["Aguarda o Kong ficar pronto"]
+        d6 --> d7["Aplica os manifests (exceto o Job de seed)"]
+        d7 --> d8["Define a tag da imagem"]
+        d8 --> d9["Aplica a topologia do RabbitMQ (CloudAMQP)"]
+        d9 --> d10["set image, rollout restart e rollout status"]
+        d10 --> d11["ConfigMap do seed, remove o Job anterior e executa o seed"]
+    end
+```
+
+</div>
+
+* O concurrency agrupa pelo nome do workflow e impede deploys simultâneos, sem cancelar o que está em andamento.
+* Quando disparado pelo Terraform, o deploy só roda se o apply terminar com sucesso.
+
+### DESTROY - Workorder DB + Secrets (`destroy.yml`)
+
+<div align="center">
+
+```mermaid
+flowchart LR
+    gatilho(["workflow_dispatch com a confirmação DESTRUIR"]) --> cond{"confirmation == DESTRUIR?"}
+    cond -->|"não"| fim(["O job não executa"])
+    cond -->|"sim"| destroy
+
+    subgraph destroy["job destroy (devops/terraform, environment prod)"]
+        direction LR
+        d1["Credenciais AWS e setup do Terraform"] --> d2["terraform init (mesmo state do terraform.yml)"]
+        d2 --> d3["terraform destroy -auto-approve"]
+        d3 --> d4["Verifica órfãos (RDS e secrets), sempre"]
+    end
+```
+
+</div>
+
+* Usa o concurrency `terraform-workorder-prod`, então nunca roda junto com o apply.
+* Os data sources leem parâmetros publicados pelo `mecanicadm-infra-v4`, então a infraestrutura de rede precisa existir até o destroy terminar.
+
+---
+
 ## 🏁 Como Começar
 
 ### Pré-requisitos
@@ -730,8 +818,6 @@ Os cenários ficam em `src/test/resources/features`, escritos em português (`# 
 
 Para rodar só o BDD: `mvn verify -Dit.test=CucumberWorkorderIT -Dtest=NoSuchTest -Dsurefire.failIfNoSpecifiedTests=false`.
 
----
-
 ## 📖 Documentação
 
 - [`docs/arquitetura-geral.md`](docs/arquitetura-geral.md): visão geral do sistema, com os diagramas.
@@ -739,3 +825,10 @@ Para rodar só o BDD: `mvn verify -Dit.test=CucumberWorkorderIT -Dtest=NoSuchTes
 - [`docs/adr`](docs/adr), [`docs/rfc`](docs/rfc): decisões de arquitetura.
 - [`docs/assets`](docs/assets): diagramas C4, ERD, sequência e fluxo de deploy (da Fase 03).
 - [`../mecanicadm-saga-api-v4/docs/apoio/saga-fluxo.md`](../mecanicadm-saga-api-v4/docs/apoio/saga-fluxo.md): o fluxo da saga e a topologia dos três serviços.
+
+## Repositórios relacionados
+
+- [mecanicadm-infra-v4](https://github.com/mecanica-dm/mecanicadm-infra-v4)
+- [mecanicadm-lambda-v4](https://github.com/mecanica-dm/mecanicadm-lambda-v4)
+- [mecanicadm-saga-api-v4](https://github.com/mecanica-dm/mecanicadm-saga-api-v4)
+- [mecanicadm-finance-api-v4](https://github.com/mecanica-dm/mecanicadm-finance-api-v4)
